@@ -50,7 +50,9 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
     setCorrectFlags(Array(12).fill(false));
     setErrorSlot(null);
     const initialImages = Array.from({ length: 12 }, (_, i) => ({
-      id: (i + 1).toString(), url: `./images/${i + 1}.webp`
+      id: (i + 1).toString(), 
+      // 🌟 GitHub Pagesのフォルダ階層を自動考慮する指定に変更
+      url: process.env.PUBLIC_URL + `/images/${i + 1}.webp` 
     })).sort(() => Math.random() - 0.5);
     setDeck(initialImages);
   }, [unit, retryCount]);
@@ -102,7 +104,6 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
 
   return (
     <>
-      {/* 🌟 MISSION CLEAR アニメーション (z-index を調整してボタンを邪魔しないように) */}
       {isCleared && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', pointerEvents: 'none', zIndex: 999, display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.4)' }}>
           <h1 style={{ fontSize: '6rem', color: '#FFD700', textShadow: '0 0 20px #FF8C00, 4px 4px 0px #d35400', animation: 'zoomBounce 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards', transform: 'scale(0)' }}>MISSION CLEAR!</h1>
@@ -126,20 +127,29 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
                 <Droppable droppableId={`slot-${index}`}>
                   {(provided, snapshot) => (
                     <div {...provided.droppableProps} ref={provided.innerRef} style={{
-                      width: '100%', aspectRatio: '4 / 3', maxHeight: '110px', margin: '0 auto',
+                      width: '100%', 
+                      aspectRatio: '4 / 3', // 🌟 4:3を強制
                       backgroundColor: correctFlags[index] ? '#e8f5e9' : (errorSlot === index ? '#ffebee' : (snapshot.isDraggingOver ? '#e3f2fd' : '#f8f9fa')),
-                      border: '2px dashed #b0bec5', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative'
+                      border: '2px dashed #b0bec5', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', overflow: 'hidden'
                     }}>
                       {slots[index] ? (
                         <Draggable key={slots[index].id} draggableId={`drag-${slots[index].id}`} index={0} isDragDisabled={correctFlags[index]}>
                           {(p, snap) => (
-                            <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps} style={{ ...p.draggableProps.style, width: snap.isDragging ? '120px' : '100%', height: snap.isDragging ? '90px' : '100%' }}>
-                              <img src={slots[index].url} style={{ width: '100%', height: '100%', objectFit: 'contain', padding:'2px', boxSizing:'border-box' }} alt={`scene-${index+1}`} />
+                            <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps} style={{ 
+                              ...p.draggableProps.style, 
+                              width: '100%', 
+                              height: '100%' 
+                            }}>
+                              <img src={slots[index].url} style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover', // 🌟 隙間なく埋める
+                                display: 'block'
+                              }} alt={`scene-${index+1}`} />
                             </div>
                           )}
                         </Draggable>
                       ) : provided.placeholder}
-                      {correctFlags[index] && !slots[index] && <div style={{position:'absolute'}}></div>}
                       {correctFlags[index] && <div className="pop-icon" style={{ position: 'absolute', color: '#4caf50', fontSize: '3rem', zIndex: 10 }}>⭕</div>}
                       {errorSlot === index && <div className="pop-icon" style={{ position: 'absolute', color: '#f44336', fontSize: '3rem', zIndex: 10 }}>❌</div>}
                     </div>
@@ -150,53 +160,36 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
           </div>
 
           {isCleared ? (
-            <div style={{
-              flex: 1, backgroundColor: '#fff', borderRadius: '15px', padding: '20px', border: '3px solid #FFD700',
-              display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-              boxShadow: '0 10px 30px rgba(255, 215, 0, 0.3)', animation: 'fadeIn 1s',
-              // 🌟 バリア（アニメーション）よりもさらに手前に持ってくる！
-              position: 'relative', zIndex: 1001 
-            }}>
+            <div style={{ flex: 1, backgroundColor: '#fff', borderRadius: '15px', padding: '20px', border: '3px solid #FFD700', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', boxShadow: '0 10px 30px rgba(255, 215, 0, 0.3)', animation: 'fadeIn 1s', position: 'relative', zIndex: 1001 }}>
               <h2 style={{ color: '#FF8C00', fontSize: '2rem', margin: '0 0 15px', borderBottom: '3px dashed #FFD700', paddingBottom: '10px' }}>RESULT</h2>
-              
-              <div style={{ textAlign: 'center', margin: '5px 0' }}>
-                <div style={{ fontSize: '1rem', color: '#666', fontWeight: 'bold' }}>Time</div>
-                <div style={{ fontSize: '2.5rem', color: '#4caf50', fontWeight: '900' }}>{finalTime}s</div>
-              </div>
-
-              <div style={{ textAlign: 'center', margin: '10px 0', padding: '10px', backgroundColor: '#fff8e1', borderRadius: '10px', width: '100%', boxSizing: 'border-box' }}>
-                <div style={{ fontSize: '0.9rem', color: '#f57c00', fontWeight: 'bold' }}>Best Record</div>
-                <div style={{ fontSize: '1.5rem', color: '#ff9800', fontWeight: 'bold' }}>{bestTime ? `${bestTime}s` : '-s'}</div>
-              </div>
-
-              <div style={{ textAlign: 'center', margin: '5px 0 15px', fontSize: '1.1rem', fontWeight: 'bold', color: mistakeCount === 0 ? '#4caf50' : '#f44336' }}>
-                Mistakes: {mistakeCount}
-                {mistakeCount === 0 && ' (Perfect! ✨)'}
-              </div>
-
-              {/* 🌟 iPad対応のタッチ＆クリック両対応ボタン */}
-              <button onClick={onRetry} className="retry-btn">
-                🔄 Retry
-              </button>
-
-              {finalTime && finalTime <= bestTime && (
-                <div style={{ marginTop: '15px', backgroundColor: '#e91e63', color: '#fff', padding: '5px 15px', borderRadius: '20px', fontWeight: 'bold', animation: 'pulse 1s infinite' }}>
-                  🎉 NEW RECORD! 🎉
-                </div>
-              )}
+              <div style={{ textAlign: 'center', margin: '5px 0' }}><div style={{ fontSize: '1rem', color: '#666', fontWeight: 'bold' }}>Time</div><div style={{ fontSize: '2.5rem', color: '#4caf50', fontWeight: '900' }}>{finalTime}s</div></div>
+              <div style={{ textAlign: 'center', margin: '10px 0', padding: '10px', backgroundColor: '#fff8e1', borderRadius: '10px', width: '100%', boxSizing: 'border-box' }}><div style={{ fontSize: '0.9rem', color: '#f57c00', fontWeight: 'bold' }}>Best Record</div><div style={{ fontSize: '1.5rem', color: '#ff9800', fontWeight: 'bold' }}>{bestTime ? `${bestTime}s` : '-s'}</div></div>
+              <div style={{ textAlign: 'center', margin: '5px 0 15px', fontSize: '1.1rem', fontWeight: 'bold', color: mistakeCount === 0 ? '#4caf50' : '#f44336' }}>Mistakes: {mistakeCount}{mistakeCount === 0 && ' (Perfect! ✨)'}</div>
+              <button onClick={onRetry} className="retry-btn">🔄 Retry</button>
             </div>
           ) : (
             <Droppable droppableId="deck" direction="horizontal">
               {(provided, snapshot) => (
                 <div {...provided.droppableProps} ref={provided.innerRef} style={{
                   flex: 1, backgroundColor: snapshot.isDraggingOver ? '#f1f8e9' : '#fff', borderRadius: '15px',
-                  padding: '12px', border: '2px solid #ddd', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(4, 1fr)', gap: '10px', alignContent: 'start'
+                  padding: '12px', border: '2px solid #ddd', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', alignContent: 'start'
                 }}>
                   {deck.map((item, index) => (
                     <Draggable key={item.id} draggableId={`deck-${item.id}`} index={index}>
                       {(p, snap) => (
-                        <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps} style={{ ...p.draggableProps.style, aspectRatio: '4 / 3', width: snap.isDragging ? '120px' : '100%' }}>
-                          <img src={item.url} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px', backgroundColor: '#fff', boxShadow: snap.isDragging ? '0 10px 20px rgba(0,0,0,0.3)' : '0 3px 6px rgba(0,0,0,0.15)' }} alt="card" />
+                        <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps} style={{ 
+                          ...p.draggableProps.style, 
+                          aspectRatio: '4 / 3', // 🌟 山札も4:3に
+                          width: '100%',
+                          overflow: 'hidden',
+                          borderRadius: '8px'
+                        }}>
+                          <img src={item.url} style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover', // 🌟 隙間なく埋める
+                            boxShadow: snap.isDragging ? '0 10px 20px rgba(0,0,0,0.3)' : '0 3px 6px rgba(0,0,0,0.15)' 
+                          }} alt="card" />
                         </div>
                       )}
                     </Draggable>
@@ -216,15 +209,8 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
           @keyframes zoomBounce { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
           @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
           @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-          
-          /* 🌟 iPadでも確実に押せるようにアニメーションをCSSに統一 */
-          .retry-btn {
-            padding: 12px 30px; font-size: 1.2rem; font-weight: bold; color: #fff; background-color: #008CBA;
-            border: none; border-radius: 30px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: transform 0.1s;
-          }
-          .retry-btn:active {
-            transform: scale(0.95);
-          }
+          .retry-btn { padding: 12px 30px; font-size: 1.2rem; font-weight: bold; color: #fff; background-color: #008CBA; border: none; border-radius: 30px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: transform 0.1s; }
+          .retry-btn:active { transform: scale(0.95); }
         `}</style>
       </DragDropContext>
     </>
