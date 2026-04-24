@@ -50,7 +50,7 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
     setCorrectFlags(Array(12).fill(false));
     setErrorSlot(null);
     const initialImages = Array.from({ length: 12 }, (_, i) => ({
-      id: (i + 1).toString(), url: `/images/${i + 1}.webp` 
+      id: (i + 1).toString(), url: `./images/${i + 1}.webp`
     })).sort(() => Math.random() - 0.5);
     setDeck(initialImages);
   }, [unit, retryCount]);
