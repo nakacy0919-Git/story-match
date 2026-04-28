@@ -51,7 +51,6 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
     setErrorSlot(null);
     const initialImages = Array.from({ length: 12 }, (_, i) => ({
       id: (i + 1).toString(), 
-      // 🌟 GitHub Pagesのフォルダ階層を自動考慮する指定に変更
       url: process.env.PUBLIC_URL + `/images/${i + 1}.webp` 
     })).sort(() => Math.random() - 0.5);
     setDeck(initialImages);
@@ -113,7 +112,8 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
       <DragDropContext onDragStart={onGameStart} onDragEnd={handleOnDragEnd}>
         <div style={{ display: 'flex', gap: '15px', flex: 1, padding: '0 20px 15px', boxSizing: 'border-box', overflow: 'hidden' }}>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridTemplateRows: 'repeat(3, 1fr)', gap: '10px', flex: 3.5 }}>
+          {/* 🌟 割合を flex: 3.5 から flex: 2.5 に変更して、右側の山札エリアを広くしました */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridTemplateRows: 'repeat(3, 1fr)', gap: '10px', flex: 2.5 }}>
             {storyData.map((data, index) => (
               <div key={index} className={errorSlot === index ? 'shake-animation' : ''} style={{ 
                 display: 'flex', flexDirection: 'column', backgroundColor: '#fff', 
@@ -127,8 +127,7 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
                 <Droppable droppableId={`slot-${index}`}>
                   {(provided, snapshot) => (
                     <div {...provided.droppableProps} ref={provided.innerRef} style={{
-                      width: '100%', 
-                      aspectRatio: '4 / 3', // 🌟 4:3を強制
+                      width: '100%', aspectRatio: '4 / 3', maxHeight: '130px', 
                       backgroundColor: correctFlags[index] ? '#e8f5e9' : (errorSlot === index ? '#ffebee' : (snapshot.isDraggingOver ? '#e3f2fd' : '#f8f9fa')),
                       border: '2px dashed #b0bec5', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', overflow: 'hidden'
                     }}>
@@ -137,15 +136,10 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
                           {(p, snap) => (
                             <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps} style={{ 
                               ...p.draggableProps.style, 
-                              width: '100%', 
-                              height: '100%' 
+                              // 🌟 ドラッグ中（持ち上げている時）は100%の指定を外して、元の小さいサイズを維持させる魔法
+                              ...(snap.isDragging ? {} : { width: '100%', height: '100%' })
                             }}>
-                              <img src={slots[index].url} style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                objectFit: 'cover', // 🌟 隙間なく埋める
-                                display: 'block'
-                              }} alt={`scene-${index+1}`} />
+                              <img src={slots[index].url} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '6px' }} alt={`scene-${index+1}`} />
                             </div>
                           )}
                         </Draggable>
@@ -160,7 +154,7 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
           </div>
 
           {isCleared ? (
-            <div style={{ flex: 1, backgroundColor: '#fff', borderRadius: '15px', padding: '20px', border: '3px solid #FFD700', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', boxShadow: '0 10px 30px rgba(255, 215, 0, 0.3)', animation: 'fadeIn 1s', position: 'relative', zIndex: 1001 }}>
+            <div style={{ flex: 1.5, backgroundColor: '#fff', borderRadius: '15px', padding: '20px', border: '3px solid #FFD700', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', boxShadow: '0 10px 30px rgba(255, 215, 0, 0.3)', animation: 'fadeIn 1s', position: 'relative', zIndex: 1001 }}>
               <h2 style={{ color: '#FF8C00', fontSize: '2rem', margin: '0 0 15px', borderBottom: '3px dashed #FFD700', paddingBottom: '10px' }}>RESULT</h2>
               <div style={{ textAlign: 'center', margin: '5px 0' }}><div style={{ fontSize: '1rem', color: '#666', fontWeight: 'bold' }}>Time</div><div style={{ fontSize: '2.5rem', color: '#4caf50', fontWeight: '900' }}>{finalTime}s</div></div>
               <div style={{ textAlign: 'center', margin: '10px 0', padding: '10px', backgroundColor: '#fff8e1', borderRadius: '10px', width: '100%', boxSizing: 'border-box' }}><div style={{ fontSize: '0.9rem', color: '#f57c00', fontWeight: 'bold' }}>Best Record</div><div style={{ fontSize: '1.5rem', color: '#ff9800', fontWeight: 'bold' }}>{bestTime ? `${bestTime}s` : '-s'}</div></div>
@@ -171,23 +165,20 @@ const MatchBoard = ({ onGameStart, onGameClear, onMistake, onRetry, mistakeCount
             <Droppable droppableId="deck" direction="horizontal">
               {(provided, snapshot) => (
                 <div {...provided.droppableProps} ref={provided.innerRef} style={{
-                  flex: 1, backgroundColor: snapshot.isDraggingOver ? '#f1f8e9' : '#fff', borderRadius: '15px',
-                  padding: '12px', border: '2px solid #ddd', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', alignContent: 'start'
+                  // 🌟 割合を flex: 1 から flex: 1.5 に拡大して、画像を大きく見やすくしました
+                  flex: 1.5, backgroundColor: snapshot.isDraggingOver ? '#f1f8e9' : '#fff', borderRadius: '15px',
+                  padding: '12px', border: '2px solid #ddd', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', alignContent: 'start'
                 }}>
                   {deck.map((item, index) => (
                     <Draggable key={item.id} draggableId={`deck-${item.id}`} index={index}>
                       {(p, snap) => (
                         <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps} style={{ 
                           ...p.draggableProps.style, 
-                          aspectRatio: '4 / 3', // 🌟 山札も4:3に
-                          width: '100%',
-                          overflow: 'hidden',
-                          borderRadius: '8px'
+                          // 🌟 ここもドラッグ中だけ100%指定を外して、巨大化を防ぎます
+                          ...(snap.isDragging ? {} : { width: '100%' })
                         }}>
                           <img src={item.url} style={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            objectFit: 'cover', // 🌟 隙間なく埋める
+                            width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', borderRadius: '8px', display: 'block',
                             boxShadow: snap.isDragging ? '0 10px 20px rgba(0,0,0,0.3)' : '0 3px 6px rgba(0,0,0,0.15)' 
                           }} alt="card" />
                         </div>
