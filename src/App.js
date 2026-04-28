@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Timer from './components/Timer';
 import MatchBoard from './components/MatchBoard';
-import RandomModeBoard from './components/RandomModeBoard'; // 🌟 新しいモードを読み込み
+import RandomModeBoard from './components/RandomModeBoard';
+import { allUnitsData } from './unitsData'; // 🌟 先ほど作成したデータを読み込む
 
 const pastelColors = [
   '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF',
@@ -10,15 +11,18 @@ const pastelColors = [
 ];
 
 function App() {
-  const [gameMode, setGameMode] = useState('learning'); // 🌟 'learning' または 'random'
+  const [gameMode, setGameMode] = useState('learning');
   const [isStarted, setIsStarted] = useState(false);
   const [isCleared, setIsCleared] = useState(false);
   const [finalTime, setFinalTime] = useState(null);
   const [mistakeCount, setMistakeCount] = useState(0);
-  const [currentUnit, setCurrentUnit] = useState(1);
+  const [currentUnit, setCurrentUnit] = useState(2); // 🌟 最初はUnit 2を表示
   const [retryCount, setRetryCount] = useState(0);
-  
   const [bestTimes, setBestTimes] = useState(() => JSON.parse(localStorage.getItem('storyMatchBestTimes')) || {});
+
+  // 🌟 判定ロジック：現在のUnitに12個分のデータが入っているかチェック
+  const currentStoryData = allUnitsData[currentUnit];
+  const hasData = currentStoryData && currentStoryData.length === 12;
 
   useEffect(() => {
     if (gameMode === 'learning' && isCleared && finalTime !== null) {
@@ -34,72 +38,72 @@ function App() {
   const handleGameStart = () => { if (!isStarted) setIsStarted(true); };
   const handleGameClear = () => setIsCleared(true);
   const handleMistake = () => setMistakeCount(prev => prev + 1);
-
   const handleRetry = () => {
     setIsStarted(false); setIsCleared(false); setFinalTime(null);
     setMistakeCount(0); setRetryCount(prev => prev + 1);
   };
-
   const handleUnitChange = (unitNum) => { setCurrentUnit(unitNum); handleRetry(); };
-
-  // モード切替時の処理
-  const handleModeChange = (mode) => {
-    if (gameMode !== mode) {
-      setGameMode(mode);
-      handleRetry();
-    }
-  };
+  const handleModeChange = (mode) => { if (gameMode !== mode) { setGameMode(mode); handleRetry(); } };
 
   return (
     <div style={{ textAlign: 'center', backgroundColor: '#f0f8ff', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       
-      {/* Unit選択メニュー */}
+      {/* Unit選択ボタン */}
       <div style={{ display: 'flex', overflowX: 'auto', padding: '10px 15px', gap: '12px', backgroundColor: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>
         {Array.from({ length: 15 }).map((_, i) => (
           <div key={i} onClick={() => handleUnitChange(i + 1)} style={{
             backgroundColor: pastelColors[i], padding: '5px', borderRadius: '12px', cursor: 'pointer',
-            boxShadow: currentUnit === i + 1 ? '0 4px 8px rgba(0,0,0,0.3)' : '0 2px 4px rgba(0,0,0,0.1)', transform: currentUnit === i + 1 ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.2s', flexShrink: 0
+            boxShadow: currentUnit === i + 1 ? '0 4px 8px rgba(0,0,0,0.3)' : '0 2px 4px rgba(0,0,0,0.1)', 
+            transform: currentUnit === i + 1 ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.2s', flexShrink: 0
           }}>
-            <div style={{ border: '2px dashed white', borderRadius: '8px', padding: '8px 16px', fontWeight: 'bold', color: '#555', fontSize: '1rem' }}>Unit {i + 1}</div>
+            <div style={{ border: '2px dashed white', borderRadius: '8px', padding: '8px 16px', fontWeight: 'bold', color: '#555' }}>Unit {i + 1}</div>
           </div>
         ))}
       </div>
 
-      {/* 🌟 ゲームモード切替ボタン */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', padding: '10px', backgroundColor: '#e6f2ff' }}>
-        <button onClick={() => handleModeChange('learning')} style={{
-          padding: '8px 25px', borderRadius: '30px', border: 'none', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
-          backgroundColor: gameMode === 'learning' ? '#FF6B6B' : '#fff', color: gameMode === 'learning' ? '#fff' : '#888',
-          boxShadow: gameMode === 'learning' ? '0 4px 10px rgba(255, 107, 107, 0.4)' : '0 2px 5px rgba(0,0,0,0.1)'
-        }}>📖 じっくり学習モード</button>
-        
-        <button onClick={() => handleModeChange('random')} style={{
-          padding: '8px 25px', borderRadius: '30px', border: 'none', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
-          backgroundColor: gameMode === 'random' ? '#4ECDC4' : '#fff', color: gameMode === 'random' ? '#fff' : '#888',
-          boxShadow: gameMode === 'random' ? '0 4px 10px rgba(78, 205, 196, 0.4)' : '0 2px 5px rgba(0,0,0,0.1)'
-        }}>⚡ ランダムモード</button>
-      </div>
+      {/* 🌟 データがある場合のみ表示するエリア */}
+      {hasData ? (
+        <>
+          {/* モード切替 */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', padding: '10px', backgroundColor: '#e6f2ff' }}>
+            <button onClick={() => handleModeChange('learning')} style={{
+              padding: '8px 25px', borderRadius: '30px', border: 'none', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer',
+              backgroundColor: gameMode === 'learning' ? '#FF6B6B' : '#fff', color: gameMode === 'learning' ? '#fff' : '#888'
+            }}>📖 じっくり学習</button>
+            <button onClick={() => handleModeChange('random')} style={{
+              padding: '8px 25px', borderRadius: '30px', border: 'none', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer',
+              backgroundColor: gameMode === 'random' ? '#4ECDC4' : '#fff', color: gameMode === 'random' ? '#fff' : '#888'
+            }}>⚡ ランダムモード</button>
+          </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 20px' }}>
-        <h1 style={{ margin: 0, fontSize: '2.0rem', fontFamily: '"Comic Sans MS", "Fredoka One", "Rounded Mplus 1c", sans-serif', background: 'linear-gradient(45deg, #FF6B6B, #4ECDC4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(2px 2px 1px rgba(0,0,0,0.1))' }}>
-          English Story Match! <span style={{fontSize:'1.1rem', color:'#888', WebkitTextFillColor: '#888'}}> - Unit {currentUnit}</span>
-        </h1>
-        {/* ランダムモードの時は全体のタイマーを隠す */}
-        {gameMode === 'learning' && (
-          <Timer key={`timer-${retryCount}`} isStarted={isStarted} isCleared={isCleared} setFinalTime={setFinalTime} />
-        )}
-      </div>
-      
-      {/* 🌟 選択されたモードによって表示するボードを切り替える */}
-      {gameMode === 'learning' ? (
-        <MatchBoard 
-          onGameStart={handleGameStart} onGameClear={handleGameClear} onMistake={handleMistake} onRetry={handleRetry}
-          mistakeCount={mistakeCount} unit={currentUnit} isCleared={isCleared} finalTime={finalTime} bestTime={bestTimes[currentUnit]} retryCount={retryCount}
-        />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 20px' }}>
+            <h1 style={{ margin: 0, fontSize: '2.0rem', fontFamily: '"Comic Sans MS", sans-serif', background: 'linear-gradient(45deg, #FF6B6B, #4ECDC4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              English Story Match! <span style={{fontSize:'1.1rem', color:'#888', WebkitTextFillColor: '#888'}}> - Unit {currentUnit}</span>
+            </h1>
+            {gameMode === 'learning' && (
+              <Timer key={`timer-${retryCount}`} isStarted={isStarted} isCleared={isCleared} setFinalTime={setFinalTime} />
+            )}
+          </div>
+          
+          {/* 各ボードに storyData を渡す */}
+          {gameMode === 'learning' ? (
+            <MatchBoard 
+              storyData={currentStoryData} onGameStart={handleGameStart} onGameClear={handleGameClear} onMistake={handleMistake} onRetry={handleRetry}
+              mistakeCount={mistakeCount} unit={currentUnit} isCleared={isCleared} finalTime={finalTime} bestTime={bestTimes[currentUnit]} retryCount={retryCount}
+            />
+          ) : (
+            <RandomModeBoard 
+              storyData={currentStoryData} unit={currentUnit} retryCount={retryCount} onRetry={handleRetry}
+            />
+          )}
+        </>
       ) : (
-        <RandomModeBoard 
-          unit={currentUnit} retryCount={retryCount} onRetry={handleRetry}
-        />
+        /* 🌟 データがない（準備中）の時の表示 */
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', color: '#888' }}>
+          <div style={{ fontSize: '5rem', marginBottom: '20px' }}>🚧</div>
+          <h2 style={{ fontSize: '2rem' }}>Unit {currentUnit} is Coming Soon!</h2>
+          <p style={{ fontSize: '1.2rem' }}>教材を作成中です。完成までお待ちください。</p>
+        </div>
       )}
     </div>
   );
