@@ -3,9 +3,18 @@
 export const allUnitsData = {
   // Unit 1 のデータをここに入れる（今日追加する分）
   1: [
-    { en: "Unit 1 の英文1", ja: "Unit 1 の和訳1" },
-    { en: "Unit 1 の英文2", ja: "Unit 1 の和訳2" },
-    // ... 合計12個まで増やす
+    { en: "E-mail and the Internet have made the world smaller.", ja: "Eメールとインターネットは世界をより小さくしました。" },
+    { en: "Today, at your house or office, you can see news and shows from all around the world.", ja: "今日、家やオフィスで、世界中のニュースや番組を見ることができます。" },
+    { en: "You can also talk to people in foreign countries by using the Internet.", ja: "また、インターネットを使って外国の人々と話すこともできます。" },
+    { en: "But does this new technology have any bad points? Yes, it does.", ja: "しかし、この新しい技術には何か悪い点があるのでしょうか？ はい、あります。" },
+    { en: "Some people sit in front of a computer all day and do not try to meet people.", ja: "一日中コンピューターの前に座り、人に会おうとしない人もいます。" },
+    { en: "But of course, face-to-face communication is sometimes necessary.", ja: "しかしもちろん、対面でのコミュニケーションが時には必要です。" },
+    { en: "For example, what do you do if your friend is feeling down?", ja: "例えば、もしあなたの友達が落ち込んでいたら、あなたはどうしますか？" },
+    { en: "You don’t need words to cheer up your friend. Just hug him or her.", ja: "友達を元気づけるのに言葉は必要ありません。ただハグしてあげればいいのです。" },
+    { en: "You cannot do this by sending e-mails.", ja: "Eメールを送ることでこれを行うことはできません。" },
+    { en: "It is often difficult to touch someone’s heart with only text messages.", ja: "テキストメッセージだけで誰かの心に触れるのは、しばしば難しいことです。" },
+    { en: "Because of their convenience, we often forget that there are some other ways of communication.", ja: "その便利さゆえに、私たちは他のコミュニケーション方法があることをしばしば忘れてしまいます。" },
+    { en: "Remember that even a smile can work much better than e-mails.", ja: "笑顔でさえ、Eメールよりもずっと効果的になり得ることを覚えておいてください。" }
   ],
 
   // Unit 2（現在セットされているもの）
