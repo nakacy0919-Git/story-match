@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Timer from './components/Timer';
 import MatchBoard from './components/MatchBoard';
 import RandomModeBoard from './components/RandomModeBoard';
-import { allUnitsData } from './unitsData'; // 🌟 先ほど作成したデータを読み込む
+import { allUnitsData } from './unitsData'; 
 
 const pastelColors = [
   '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF',
@@ -16,11 +16,13 @@ function App() {
   const [isCleared, setIsCleared] = useState(false);
   const [finalTime, setFinalTime] = useState(null);
   const [mistakeCount, setMistakeCount] = useState(0);
-  const [currentUnit, setCurrentUnit] = useState(2); // 🌟 最初はUnit 2を表示
+  const [currentUnit, setCurrentUnit] = useState(2); 
   const [retryCount, setRetryCount] = useState(0);
   const [bestTimes, setBestTimes] = useState(() => JSON.parse(localStorage.getItem('storyMatchBestTimes')) || {});
+  
+  // 🌟 ヒントを使った時のペナルティ秒数を記録するステート
+  const [penaltySeconds, setPenaltySeconds] = useState(0);
 
-  // 🌟 判定ロジック：現在のUnitに12個分のデータが入っているかチェック
   const currentStoryData = allUnitsData[currentUnit];
   const hasData = currentStoryData && currentStoryData.length === 12;
 
@@ -38,17 +40,24 @@ function App() {
   const handleGameStart = () => { if (!isStarted) setIsStarted(true); };
   const handleGameClear = () => setIsCleared(true);
   const handleMistake = () => setMistakeCount(prev => prev + 1);
+  
+  // 🌟 ペナルティを追加する関数
+  const handleAddPenalty = (seconds) => {
+    setPenaltySeconds(prev => prev + seconds);
+  };
+
   const handleRetry = () => {
     setIsStarted(false); setIsCleared(false); setFinalTime(null);
     setMistakeCount(0); setRetryCount(prev => prev + 1);
+    setPenaltySeconds(0); // 🌟 リトライ時にペナルティもリセット！
   };
+  
   const handleUnitChange = (unitNum) => { setCurrentUnit(unitNum); handleRetry(); };
   const handleModeChange = (mode) => { if (gameMode !== mode) { setGameMode(mode); handleRetry(); } };
 
   return (
     <div style={{ textAlign: 'center', backgroundColor: '#f0f8ff', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       
-      {/* Unit選択ボタン */}
       <div style={{ display: 'flex', overflowX: 'auto', padding: '10px 15px', gap: '12px', backgroundColor: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>
         {Array.from({ length: 15 }).map((_, i) => (
           <div key={i} onClick={() => handleUnitChange(i + 1)} style={{
@@ -61,10 +70,8 @@ function App() {
         ))}
       </div>
 
-      {/* 🌟 データがある場合のみ表示するエリア */}
       {hasData ? (
         <>
-          {/* モード切替 */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', padding: '10px', backgroundColor: '#e6f2ff' }}>
             <button onClick={() => handleModeChange('learning')} style={{
               padding: '8px 25px', borderRadius: '30px', border: 'none', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer',
@@ -81,15 +88,16 @@ function App() {
               English Story Match! <span style={{fontSize:'1.1rem', color:'#888', WebkitTextFillColor: '#888'}}> - Unit {currentUnit}</span>
             </h1>
             {gameMode === 'learning' && (
-              <Timer key={`timer-${retryCount}`} isStarted={isStarted} isCleared={isCleared} setFinalTime={setFinalTime} />
+              // 🌟 Timer に penaltySeconds を渡す
+              <Timer key={`timer-${retryCount}`} isStarted={isStarted} isCleared={isCleared} setFinalTime={setFinalTime} penaltySeconds={penaltySeconds} />
             )}
           </div>
           
-          {/* 各ボードに storyData を渡す */}
           {gameMode === 'learning' ? (
             <MatchBoard 
               storyData={currentStoryData} onGameStart={handleGameStart} onGameClear={handleGameClear} onMistake={handleMistake} onRetry={handleRetry}
               mistakeCount={mistakeCount} unit={currentUnit} isCleared={isCleared} finalTime={finalTime} bestTime={bestTimes[currentUnit]} retryCount={retryCount}
+              onHintUsed={handleAddPenalty} // 🌟 ヒントが使われたらペナルティ関数を呼ぶ
             />
           ) : (
             <RandomModeBoard 
@@ -98,7 +106,6 @@ function App() {
           )}
         </>
       ) : (
-        /* 🌟 データがない（準備中）の時の表示 */
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', color: '#888' }}>
           <div style={{ fontSize: '5rem', marginBottom: '20px' }}>🚧</div>
           <h2 style={{ fontSize: '2rem' }}>Unit {currentUnit} is Coming Soon!</h2>

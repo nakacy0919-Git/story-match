@@ -1,28 +1,36 @@
 import React, { useState, useEffect } from 'react';
 
-const Timer = ({ isStarted, isCleared, setFinalTime }) => {
-  const [seconds, setSeconds] = useState(0);
+// 🌟 penaltySeconds を新しく受け取るように設定
+const Timer = ({ isStarted, isCleared, setFinalTime, penaltySeconds = 0 }) => {
+  const [time, setTime] = useState(0);
 
   useEffect(() => {
     let interval = null;
-    // 開始していて、まだクリアしていない時だけカウントアップ
+    
     if (isStarted && !isCleared) {
       interval = setInterval(() => {
-        setSeconds((prev) => prev + 1);
+        setTime((prevTime) => prevTime + 1);
       }, 1000);
-    } else if (isCleared && isStarted) {
-      // クリア時に最終タイムを記録
-      setFinalTime(seconds);
+    } else if (isCleared) {
       clearInterval(interval);
+      // 🌟 クリアした時に、実際の時間＋ペナルティ時間を「最終タイム」として保存
+      setFinalTime(time + penaltySeconds);
     }
+    
     return () => clearInterval(interval);
-  }, [isStarted, isCleared, seconds, setFinalTime]);
+  }, [isStarted, isCleared, setFinalTime, time, penaltySeconds]);
+
+  // 🌟 画面に表示する数字は、常に「実際の経過時間 ＋ ペナルティ時間」
+  const displayTime = time + penaltySeconds;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#fff', padding: '8px 25px', borderRadius: '30px', boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.1)' }}>
-      <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#444', fontFamily: 'monospace' }}>
-        ⏱ {seconds}s
-      </div>
+    <div style={{ 
+      fontSize: '1.5rem', fontWeight: 'bold', color: '#ff5722', 
+      backgroundColor: '#fff', padding: '5px 20px', borderRadius: '20px', 
+      border: '3px solid #ff5722', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+      transition: 'color 0.3s' // 時間が飛んだ時に滑らかに見せる隠し味
+    }}>
+      ⏱ Time: {displayTime}s
     </div>
   );
 };
