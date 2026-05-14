@@ -8,20 +8,22 @@ const HistoryBoard = ({ history, onBack }) => {
     if (history.length === 0) return "まずは「じっくり学習」でストーリーを読んでみよう！";
     
     const lastSession = history[0];
-    // 🌟 せっかく計算した変数を使えるように、アドバイスに組み込みました！
     const totalMistakes = history.reduce((acc, cur) => acc + cur.mistakes, 0);
     
     if (totalMistakes > 50) {
       return `今まで合計で ${totalMistakes} 回のミスがあったね。たくさん間違えながら、しっかり学べている証拠だよ！その調子でどんどん挑戦しよう！`;
     }
+    if (lastSession.mode === 'listening' && lastSession.result > 80) {
+      return "リスニング満点近いね！耳がしっかり英語に慣れてきている証拠だよ！";
+    }
     if (lastSession.mistakes > 3) {
       return "前回のパズルは少し難しかったかな？もう一度「じっくり学習」で英文を確認してみると、次はもっと早く解けるようになるよ！";
     }
     if (lastSession.result < 30 && lastSession.mode === 'puzzle') {
-      return "素晴らしいスピードだね！次はランダムモードで、瞬発力を鍛えてみよう！";
+      return "素晴らしいスピードだね！次はランダムモードやリスニングモードで瞬発力を鍛えてみよう！";
     }
     if (history.length > 5) {
-      return "継続して学習できているね！この調子で、すべてのUnitでSランク（30秒以内）を目指してみよう。";
+      return "継続して学習できているね！この調子で、すべてのUnitでSランクを目指してみよう。";
     }
     return "よく頑張っているね。間違えたところは、じっくり学習で復習するのが上達の近道だよ。";
   };
@@ -63,14 +65,21 @@ const HistoryBoard = ({ history, onBack }) => {
         <div style={{ textAlign: 'left' }}>
           <h3 style={{ color: '#666' }}>最近の学習ログ</h3>
           <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            {history.map((h, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '15px', borderBottom: '1px solid #eee', fontSize: '1rem' }}>
-                <span>📅 {new Date(h.date).toLocaleString()}</span>
-                <span style={{ fontWeight: 'bold' }}>Unit {h.unit} - {h.mode === 'puzzle' ? `🧩 L${h.level}` : '⚡ Random'}</span>
-                <span style={{ color: '#6c5ce7', fontWeight: 'bold' }}>{h.mode === 'puzzle' ? `${h.result}秒` : `${h.result}点`}</span>
-                <span style={{ color: h.mistakes === 0 ? '#4caf50' : '#f44336' }}>ミス: {h.mistakes}</span>
-              </div>
-            ))}
+            {history.map((h, i) => {
+              let modeIcon = '';
+              let modeName = '';
+              if (h.mode === 'puzzle') { modeIcon = '🧩'; modeName = `L${h.level}`; }
+              else if (h.mode === 'random') { modeIcon = '⚡'; modeName = 'Random'; }
+              else if (h.mode === 'listening') { modeIcon = '🎧'; modeName = 'Listen'; }
+
+              return (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '15px', borderBottom: '1px solid #eee', fontSize: '1rem' }}>
+                  <span>📅 {new Date(h.date).toLocaleString()}</span>
+                  <span style={{ fontWeight: 'bold' }}>Unit {h.unit} - {modeIcon} {modeName}</span>
+                  <span style={{ color: '#6c5ce7', fontWeight: 'bold' }}>{h.mode === 'puzzle' ? `${h.result}秒` : `${h.result}点`}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
