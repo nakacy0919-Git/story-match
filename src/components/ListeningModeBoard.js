@@ -61,19 +61,35 @@ const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGa
     setFeedback(null);
   };
 
+  // 🌟 究極の音声フリーズ回避 ＋ 高音質ネイティブボイス選択処理
   const speakText = () => {
-    const correctId = questions[currentQueueIndex];
-    if (correctId === undefined || !storyData) return;
+    if (!questions[currentIndex] || !storyData) return;
     
     const synth = window.speechSynthesis;
     synth.resume();
     synth.cancel();
 
     setTimeout(() => {
-      const text = storyData[correctId].en;
+      const text = storyData[questions[currentIndex]].en;
       const utterance = new SpeechSynthesisUtterance(text);
+      
+      // 🌟 生徒が聞き取りやすいように少しだけゆっくりに
+      utterance.rate = 0.85; 
       utterance.lang = 'en-US';
-      utterance.rate = 0.9;
+
+      // 🌟 デバイス内にある「一番ネイティブに近い高音質ボイス」を探してセットする
+      const voices = synth.getVoices();
+      const bestVoice = 
+        voices.find(v => v.name.includes('Google US English')) || // Chrome用（高音質）
+        voices.find(v => v.name.includes('Samantha')) ||          // Safari/iOS用（滑らか）
+        voices.find(v => v.name.includes('Alex')) ||              // Mac用
+        voices.find(v => v.lang === 'en-US' && v.localService === false) || // Edge等のクラウド音声
+        voices.find(v => v.lang === 'en-US');                     // 見つからなければ標準の英語
+
+      if (bestVoice) {
+        utterance.voice = bestVoice;
+      }
+
       window.currentUtteranceHack = utterance;
       synth.speak(utterance);
     }, 300);
