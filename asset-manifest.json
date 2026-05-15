@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/story-match/static/js/main.3fbfdacc.js",
+    "main.js": "/story-match/static/js/main.cdc7ab70.js",
     "index.html": "/story-match/index.html",
-    "main.3fbfdacc.js.map": "/story-match/static/js/main.3fbfdacc.js.map"
+    "main.cdc7ab70.js.map": "/story-match/static/js/main.cdc7ab70.js.map"
   },
   "entrypoints": [
-    "static/js/main.3fbfdacc.js"
+    "static/js/main.cdc7ab70.js"
   ]
 }
