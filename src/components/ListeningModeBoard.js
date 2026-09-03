@@ -63,14 +63,14 @@ const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGa
 
   // 🌟 究極の音声フリーズ回避 ＋ 高音質ネイティブボイス選択処理
   const speakText = () => {
-    if (!questions[currentIndex] || !storyData) return;
+    if (!questions[currentQueueIndex] || !storyData) return;
     
     const synth = window.speechSynthesis;
     synth.resume();
     synth.cancel();
 
     setTimeout(() => {
-      const text = storyData[questions[currentIndex]].en;
+      const text = storyData[questions[currentQueueIndex]].en;
       const utterance = new SpeechSynthesisUtterance(text);
       
       // 🌟 生徒が聞き取りやすいように少しだけゆっくりに
