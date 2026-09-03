@@ -26,7 +26,6 @@ const pastelColors = [
 ];
 
 function App() {
-
   // ============================================================
   // 基本状態
   // ============================================================
@@ -46,16 +45,13 @@ function App() {
   const [finalTime, setFinalTime] = useState(null);
   const [mistakeCount, setMistakeCount] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
-
   const [penaltySeconds, setPenaltySeconds] = useState(0);
 
-
   // ============================================================
-  // 🌟 じっくり学習：現在のScene番号
+  // じっくり学習：現在のScene
   // ============================================================
 
   const [readingSceneIndex, setReadingSceneIndex] = useState(0);
-
 
   // ============================================================
   // 生徒情報
@@ -75,9 +71,8 @@ function App() {
     !!studentInfo.name
   );
 
-
   // ============================================================
-  // 学習履歴・ベストタイム
+  // 学習履歴
   // ============================================================
 
   const [history, setHistory] = useState(() =>
@@ -88,30 +83,31 @@ function App() {
     JSON.parse(localStorage.getItem('storyMatchBestTimes')) || {}
   );
 
-
   // ============================================================
-  // 現在のUnitデータ
+  // 現在のUnit
   // ============================================================
 
   const currentStoryData = allUnitsData[currentUnit];
 
+  // ★重要
+  // 以前は length === 12 だったため、
+  // 12個以外だと工事中扱いになっていた。
+  //
+  // データが1個以上あれば使用可能に変更。
   const hasData =
-    currentStoryData &&
-    currentStoryData.length === 12;
-
+    Array.isArray(currentStoryData) &&
+    currentStoryData.length > 0;
 
   // ============================================================
   // Puzzle Best Time
   // ============================================================
 
   useEffect(() => {
-
     if (
       gameMode === 'puzzle' &&
       isCleared &&
       finalTime !== null
     ) {
-
       const bestKey =
         `${currentUnit}-L${level}`;
 
@@ -122,7 +118,6 @@ function App() {
         !currentBest ||
         finalTime < currentBest
       ) {
-
         const newBests = {
           ...bestTimes,
           [bestKey]: finalTime
@@ -136,7 +131,6 @@ function App() {
         );
       }
     }
-
   }, [
     isCleared,
     finalTime,
@@ -146,39 +140,26 @@ function App() {
     level
   ]);
 
-
   // ============================================================
   // 学習履歴保存
   // ============================================================
 
   const saveLearningLog = (data) => {
-
     const newLog = {
-
       date: new Date().toISOString(),
-
       unit: currentUnit,
-
       mode: data.mode,
-
       result: data.result,
-
-      mistakes:
-        data.mistakes || 0,
-
-      level:
-        data.level || null
+      mistakes: data.mistakes || 0,
+      level: data.level || null
     };
-
 
     const newHistory = [
       newLog,
       ...history
     ].slice(0, 100);
 
-
     setHistory(newHistory);
-
 
     localStorage.setItem(
       'storyMatchHistory',
@@ -186,25 +167,17 @@ function App() {
     );
   };
 
-
   // ============================================================
-  // ゲームクリア
+  // Game Clear
   // ============================================================
 
   const handleGameClear = (resultData) => {
-
     setIsCleared(true);
 
     saveLearningLog({
-
       mode: gameMode,
-
-      result:
-        resultData.result,
-
-      mistakes:
-        mistakeCount,
-
+      result: resultData.result,
+      mistakes: mistakeCount,
       level:
         gameMode === 'puzzle'
           ? level
@@ -212,13 +185,11 @@ function App() {
     });
   };
 
-
   // ============================================================
   // 生徒登録
   // ============================================================
 
   const handleRegister = (e) => {
-
     e.preventDefault();
 
     if (
@@ -226,7 +197,6 @@ function App() {
       studentInfo.number &&
       studentInfo.name
     ) {
-
       localStorage.setItem(
         'storyMatchStudent',
         JSON.stringify(studentInfo)
@@ -236,39 +206,29 @@ function App() {
     }
   };
 
-
   // ============================================================
   // 生徒情報変更
   // ============================================================
 
   const handleEditInfo = () => {
-
     const pw = prompt(
       '先生のパスワードを入力してください（情報の書き換え）:'
     );
 
     if (pw === '3939') {
-
       setIsRegistered(false);
-
     } else {
-
-      alert(
-        'パスワードが違います。'
-      );
+      alert('パスワードが違います。');
     }
   };
-
 
   // ============================================================
   // Unit変更
   // ============================================================
 
   const handleUnitChange = (unitNum) => {
-
     setCurrentUnit(unitNum);
 
-    // 🌟 Sceneを1へ戻す
     setReadingSceneIndex(0);
 
     resetGameState();
@@ -276,13 +236,11 @@ function App() {
     setView('mode-select');
   };
 
-
   // ============================================================
   // ゲーム状態リセット
   // ============================================================
 
   const resetGameState = () => {
-
     setIsStarted(false);
 
     setIsCleared(false);
@@ -297,38 +255,30 @@ function App() {
 
     setPenaltySeconds(0);
 
-    // 🌟 Reading Sceneも最初へ
     setReadingSceneIndex(0);
 
-
-    // Browser TTSを停止
     if (
       'speechSynthesis' in window
     ) {
-
       window.speechSynthesis.cancel();
     }
   };
-
 
   // ============================================================
   // Hint penalty
   // ============================================================
 
   const handleAddPenalty = (seconds) => {
-
     setPenaltySeconds(
       prev => prev + seconds
     );
   };
 
-
   // ============================================================
-  // Reading開始
+  // Reading Start
   // ============================================================
 
   const startReading = () => {
-
     resetGameState();
 
     setReadingSceneIndex(0);
@@ -336,13 +286,11 @@ function App() {
     setView('game');
   };
 
-
   // ============================================================
-  // Puzzle開始
+  // Puzzle Start
   // ============================================================
 
   const startPuzzle = (selectedLevel) => {
-
     setLevel(selectedLevel);
 
     resetGameState();
@@ -350,13 +298,11 @@ function App() {
     setView('game');
   };
 
-
   // ============================================================
-  // Random / Listening開始
+  // Random / Listening Start
   // ============================================================
 
   const startQuiz = (count) => {
-
     setQCount(
       count === 'ALL'
         ? 12
@@ -370,25 +316,34 @@ function App() {
     setView('game');
   };
 
+  // ============================================================
+  // Quit
+  // ============================================================
+
+  const handleQuit = () => {
+    setView('mode-select');
+
+    setReadingSceneIndex(0);
+
+    resetGameState();
+  };
 
   // ============================================================
-  // 生徒未登録時
+  // 未登録
   // ============================================================
 
   if (!isRegistered) {
-
     return (
-
       <div
         style={{
-          height: '100vh',
+          height: '100dvh',
+          minHeight: '100dvh',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           backgroundColor: '#f0f8ff'
         }}
       >
-
         <form
           onSubmit={handleRegister}
           style={{
@@ -397,10 +352,11 @@ function App() {
             borderRadius: '30px',
             boxShadow:
               '0 10px 25px rgba(0,0,0,0.1)',
-            width: '400px'
+            width: '400px',
+            maxWidth: '90vw',
+            boxSizing: 'border-box'
           }}
         >
-
           <h2
             style={{
               color: '#333',
@@ -411,16 +367,12 @@ function App() {
             🎓 Student Registration
           </h2>
 
-
-          {/* CLASS */}
-
           <div
             style={{
               marginBottom: '20px',
               textAlign: 'left'
             }}
           >
-
             <label
               style={{
                 display: 'block',
@@ -451,11 +403,7 @@ function App() {
                 fontSize: '1.1rem'
               }}
             />
-
           </div>
-
-
-          {/* NUMBER */}
 
           <div
             style={{
@@ -463,7 +411,6 @@ function App() {
               textAlign: 'left'
             }}
           >
-
             <label
               style={{
                 display: 'block',
@@ -494,11 +441,7 @@ function App() {
                 fontSize: '1.1rem'
               }}
             />
-
           </div>
-
-
-          {/* NAME */}
 
           <div
             style={{
@@ -506,7 +449,6 @@ function App() {
               textAlign: 'left'
             }}
           >
-
             <label
               style={{
                 display: 'block',
@@ -537,9 +479,7 @@ function App() {
                 fontSize: '1.1rem'
               }}
             />
-
           </div>
-
 
           <button
             type="submit"
@@ -553,48 +493,36 @@ function App() {
               fontSize: '1.2rem',
               fontWeight: 'bold',
               cursor: 'pointer',
-              transition: 'transform 0.1s',
               boxShadow:
                 '0 4px 6px rgba(0,0,0,0.1)'
             }}
-            onMouseDown={(e) =>
-              e.currentTarget.style.transform =
-                'scale(0.95)'
-            }
-            onMouseUp={(e) =>
-              e.currentTarget.style.transform =
-                'scale(1)'
-            }
           >
             Start Learning
           </button>
-
         </form>
-
       </div>
     );
   }
-
 
   // ============================================================
   // MAIN APP
   // ============================================================
 
   return (
-
     <div
-  style={{
-    textAlign: 'center',
-    backgroundColor: '#f0f8ff',
-    height: '100dvh',
-    minHeight: '100dvh',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden'
-  }}
+      style={{
+        textAlign: 'center',
+        backgroundColor: '#f0f8ff',
+
+        // ★iPad Safari対策
+        height: '100dvh',
+        minHeight: '100dvh',
+
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}
     >
-
-
       {/* ========================================================
           UNIT BAR
       ======================================================== */}
@@ -603,6 +531,7 @@ function App() {
         style={{
           display: 'flex',
           overflowX: 'auto',
+          overflowY: 'hidden',
           padding: '10px 15px',
           gap: '12px',
           backgroundColor: '#fff',
@@ -611,18 +540,15 @@ function App() {
           flexShrink: 0
         }}
       >
-
         {Array.from({
           length: 15
         }).map((_, i) => (
-
           <div
             key={i}
             onClick={() =>
               handleUnitChange(i + 1)
             }
             style={{
-
               backgroundColor:
                 pastelColors[i],
 
@@ -648,7 +574,6 @@ function App() {
               flexShrink: 0
             }}
           >
-
             <div
               style={{
                 border:
@@ -661,36 +586,29 @@ function App() {
             >
               Unit {i + 1}
             </div>
-
           </div>
-
         ))}
-
       </div>
 
-
       {/* ========================================================
-          UNIT DATAあり
+          DATAあり
       ======================================================== */}
 
       {hasData ? (
-
         <div
           style={{
             flex: 1,
+            minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
           }}
         >
-
-
           {/* ====================================================
               MODE SELECT
           ==================================================== */}
 
           {view === 'mode-select' && (
-
             <div
               style={{
                 flex: 1,
@@ -703,9 +621,7 @@ function App() {
                 position: 'relative'
               }}
             >
-
-
-              {/* STUDENT PROFILE */}
+              {/* Student Profile */}
 
               <div
                 style={{
@@ -721,7 +637,6 @@ function App() {
                     '0 4px 10px rgba(0,0,0,0.05)'
                 }}
               >
-
                 <div
                   style={{
                     fontSize: '0.9rem',
@@ -761,11 +676,9 @@ function App() {
                 >
                   情報を変更する
                 </button>
-
               </div>
 
-
-              {/* HISTORY */}
+              {/* History */}
 
               <button
                 onClick={() =>
@@ -801,7 +714,6 @@ function App() {
                 📊
               </button>
 
-
               <h2
                 style={{
                   fontSize: '2.5rem',
@@ -812,7 +724,6 @@ function App() {
                 Select Game Mode - Unit {currentUnit}
               </h2>
 
-
               <div
                 style={{
                   display: 'flex',
@@ -821,9 +732,7 @@ function App() {
                   justifyContent: 'center'
                 }}
               >
-
-
-                {/* READING */}
+                {/* Reading */}
 
                 <div
                   onClick={() => {
@@ -836,7 +745,6 @@ function App() {
                       '5px solid #4CAF50'
                   }}
                 >
-
                   <div
                     style={{
                       fontSize: '4.5rem',
@@ -867,11 +775,9 @@ function App() {
                     <br />
                     ストーリーを読む
                   </p>
-
                 </div>
 
-
-                {/* PUZZLE */}
+                {/* Puzzle */}
 
                 <div
                   onClick={() => {
@@ -886,7 +792,6 @@ function App() {
                       '5px solid #FF6B6B'
                   }}
                 >
-
                   <div
                     style={{
                       fontSize: '4.5rem',
@@ -917,11 +822,9 @@ function App() {
                     <br />
                     物語を完成させる
                   </p>
-
                 </div>
 
-
-                {/* RANDOM */}
+                {/* Random */}
 
                 <div
                   onClick={() => {
@@ -936,7 +839,6 @@ function App() {
                       '5px solid #4ECDC4'
                   }}
                 >
-
                   <div
                     style={{
                       fontSize: '4.5rem',
@@ -967,17 +869,16 @@ function App() {
                     <br />
                     素早く見極める
                   </p>
-
                 </div>
 
-
-                {/* LISTENING */}
+                {/* Listening */}
 
                 <div
                   onClick={() => {
                     setGameMode(
                       'listening'
                     );
+
                     setView(
                       'settings-select'
                     );
@@ -988,7 +889,6 @@ function App() {
                       '5px solid #9C27B0'
                   }}
                 >
-
                   <div
                     style={{
                       fontSize: '4.5rem',
@@ -1019,22 +919,16 @@ function App() {
                     <br />
                     正しい画像を選ぶ
                   </p>
-
                 </div>
-
               </div>
-
             </div>
-
           )}
-
 
           {/* ====================================================
               HISTORY
           ==================================================== */}
 
           {view === 'history' && (
-
             <HistoryBoard
               history={history}
               onBack={() =>
@@ -1043,9 +937,7 @@ function App() {
                 )
               }
             />
-
           )}
-
 
           {/* ====================================================
               PUZZLE SETTINGS
@@ -1053,127 +945,116 @@ function App() {
 
           {view === 'settings-select' &&
             gameMode === 'puzzle' && (
-
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                gap: '30px',
-                alignItems: 'center'
-              }}
-            >
-
-              <h2
-                style={{
-                  fontSize: '2.5rem',
-                  color: '#FF6B6B'
-                }}
-              >
-                Select Puzzle Level
-              </h2>
-
-
               <div
                 style={{
+                  flex: 1,
                   display: 'flex',
-                  gap: '30px'
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  gap: '30px',
+                  alignItems: 'center'
                 }}
               >
+                <h2
+                  style={{
+                    fontSize: '2.5rem',
+                    color: '#FF6B6B'
+                  }}
+                >
+                  Select Puzzle Level
+                </h2>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '30px'
+                  }}
+                >
+                  <button
+                    onClick={() =>
+                      startPuzzle(1)
+                    }
+                    className="level-btn"
+                    style={{
+                      backgroundColor:
+                        '#FFD700'
+                    }}
+                  >
+                    Level 1
+                    <br />
+                    <span
+                      style={{
+                        fontSize: '1rem'
+                      }}
+                    >
+                      (6枚ヒント)
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      startPuzzle(2)
+                    }
+                    className="level-btn"
+                    style={{
+                      backgroundColor:
+                        '#FF8C00'
+                    }}
+                  >
+                    Level 2
+                    <br />
+                    <span
+                      style={{
+                        fontSize: '1rem'
+                      }}
+                    >
+                      (3枚ヒント)
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      startPuzzle(3)
+                    }
+                    className="level-btn"
+                    style={{
+                      backgroundColor:
+                        '#FF4500'
+                    }}
+                  >
+                    Level 3
+                    <br />
+                    <span
+                      style={{
+                        fontSize: '1rem'
+                      }}
+                    >
+                      (すべて空欄)
+                    </span>
+                  </button>
+                </div>
 
                 <button
                   onClick={() =>
-                    startPuzzle(1)
+                    setView(
+                      'mode-select'
+                    )
                   }
-                  className="level-btn"
                   style={{
-                    backgroundColor:
-                      '#FFD700'
+                    marginTop: '20px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#888',
+                    cursor: 'pointer',
+                    textDecoration:
+                      'underline',
+                    fontSize: '1.2rem'
                   }}
                 >
-                  Level 1
-                  <br />
-                  <span
-                    style={{
-                      fontSize: '1rem'
-                    }}
-                  >
-                    (6枚ヒント)
-                  </span>
+                  ← もどる
                 </button>
-
-
-                <button
-                  onClick={() =>
-                    startPuzzle(2)
-                  }
-                  className="level-btn"
-                  style={{
-                    backgroundColor:
-                      '#FF8C00'
-                  }}
-                >
-                  Level 2
-                  <br />
-                  <span
-                    style={{
-                      fontSize: '1rem'
-                    }}
-                  >
-                    (3枚ヒント)
-                  </span>
-                </button>
-
-
-                <button
-                  onClick={() =>
-                    startPuzzle(3)
-                  }
-                  className="level-btn"
-                  style={{
-                    backgroundColor:
-                      '#FF4500'
-                  }}
-                >
-                  Level 3
-                  <br />
-                  <span
-                    style={{
-                      fontSize: '1rem'
-                    }}
-                  >
-                    (すべて空欄)
-                  </span>
-                </button>
-
               </div>
-
-
-              <button
-                onClick={() =>
-                  setView(
-                    'mode-select'
-                  )
-                }
-                style={{
-                  marginTop: '20px',
-                  background: 'none',
-                  border: 'none',
-                  color: '#888',
-                  cursor: 'pointer',
-                  textDecoration:
-                    'underline',
-                  fontSize: '1.2rem'
-                }}
-              >
-                ← もどる
-              </button>
-
-            </div>
-
-          )}
-
+            )}
 
           {/* ====================================================
               RANDOM / LISTENING SETTINGS
@@ -1184,141 +1065,127 @@ function App() {
               gameMode === 'random' ||
               gameMode === 'listening'
             ) && (
-
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                gap: '30px',
-                alignItems: 'center'
-              }}
-            >
-
-              <h2
-                style={{
-                  fontSize: '2.5rem',
-                  color:
-                    gameMode === 'random'
-                      ? '#4ECDC4'
-                      : '#9C27B0'
-                }}
-              >
-                Select Question Count
-              </h2>
-
-
               <div
                 style={{
+                  flex: 1,
                   display: 'flex',
-                  gap: '30px'
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  gap: '30px',
+                  alignItems: 'center'
                 }}
               >
-
-                <button
-                  onClick={() =>
-                    startQuiz(5)
-                  }
-                  className="count-btn"
+                <h2
                   style={{
-                    backgroundColor:
+                    fontSize: '2.5rem',
+                    color:
                       gameMode === 'random'
                         ? '#4ECDC4'
                         : '#9C27B0'
                   }}
                 >
-                  5問
-                </button>
+                  Select Question Count
+                </h2>
 
-
-                <button
-                  onClick={() =>
-                    startQuiz(8)
-                  }
-                  className="count-btn"
+                <div
                   style={{
-                    backgroundColor:
-                      gameMode === 'random'
-                        ? '#4ECDC4'
-                        : '#9C27B0'
+                    display: 'flex',
+                    gap: '30px'
                   }}
                 >
-                  8問
-                </button>
-
-
-                <button
-                  onClick={() =>
-                    startQuiz('ALL')
-                  }
-                  className="count-btn"
-                  style={{
-                    backgroundColor:
-                      gameMode === 'random'
-                        ? '#4ECDC4'
-                        : '#9C27B0'
-                  }}
-                >
-                  ALL
-                  <br />
-                  <span
+                  <button
+                    onClick={() =>
+                      startQuiz(5)
+                    }
+                    className="count-btn"
                     style={{
-                      fontSize: '1rem'
+                      backgroundColor:
+                        gameMode ===
+                        'random'
+                          ? '#4ECDC4'
+                          : '#9C27B0'
                     }}
                   >
-                    (全12問)
-                  </span>
+                    5問
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      startQuiz(8)
+                    }
+                    className="count-btn"
+                    style={{
+                      backgroundColor:
+                        gameMode ===
+                        'random'
+                          ? '#4ECDC4'
+                          : '#9C27B0'
+                    }}
+                  >
+                    8問
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      startQuiz('ALL')
+                    }
+                    className="count-btn"
+                    style={{
+                      backgroundColor:
+                        gameMode ===
+                        'random'
+                          ? '#4ECDC4'
+                          : '#9C27B0'
+                    }}
+                  >
+                    ALL
+                    <br />
+                    <span
+                      style={{
+                        fontSize: '1rem'
+                      }}
+                    >
+                      (全12問)
+                    </span>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() =>
+                    setView(
+                      'mode-select'
+                    )
+                  }
+                  style={{
+                    marginTop: '20px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#888',
+                    cursor: 'pointer',
+                    textDecoration:
+                      'underline',
+                    fontSize: '1.2rem'
+                  }}
+                >
+                  ← もどる
                 </button>
-
               </div>
-
-
-              <button
-                onClick={() =>
-                  setView(
-                    'mode-select'
-                  )
-                }
-                style={{
-                  marginTop: '20px',
-                  background: 'none',
-                  border: 'none',
-                  color: '#888',
-                  cursor: 'pointer',
-                  textDecoration:
-                    'underline',
-                  fontSize: '1.2rem'
-                }}
-              >
-                ← もどる
-              </button>
-
-            </div>
-
-          )}
-
+            )}
 
           {/* ====================================================
               GAME
           ==================================================== */}
 
           {view === 'game' && (
-
             <>
-
-
               {/* =================================================
-                  🌟 GAME HEADER
-                  Unit + Sceneを同じ行へ
+                  GAME HEADER
               ================================================= */}
 
               <div
                 style={{
                   display: 'grid',
 
-                  // 左右の幅をそろえることで
-                  // Unitを画面中央に固定
                   gridTemplateColumns:
                     '170px 1fr 170px',
 
@@ -1333,30 +1200,10 @@ function App() {
                   boxSizing: 'border-box'
                 }}
               >
-
-
-                {/* LEFT : QUIT */}
+                {/* Quit */}
 
                 <button
-                  onClick={() => {
-
-                    setView(
-                      'mode-select'
-                    );
-
-                    setReadingSceneIndex(0);
-
-                    if (
-                      'speechSynthesis'
-                      in window
-                    ) {
-
-                      window
-                        .speechSynthesis
-                        .cancel();
-                    }
-
-                  }}
+                  onClick={handleQuit}
                   style={{
                     justifySelf: 'start',
 
@@ -1396,27 +1243,18 @@ function App() {
                   🏠 Quit
                 </button>
 
-
-                {/* CENTER : UNIT + SCENE */}
+                {/* Unit + Scene */}
 
                 <div
                   style={{
                     display: 'flex',
-
                     alignItems: 'center',
-
                     justifyContent:
                       'center',
-
                     gap: '16px',
-
                     minWidth: 0
                   }}
                 >
-
-
-                  {/* UNIT */}
-
                   <h1
                     style={{
                       margin: 0,
@@ -1438,25 +1276,20 @@ function App() {
                       whiteSpace: 'nowrap'
                     }}
                   >
-
                     Unit {currentUnit}
 
                     {gameMode ===
                     'puzzle'
                       ? ` - L${level}`
                       : ''}
-
                   </h1>
 
-
-                  {/* 🌟 READING SCENE */}
+                  {/* Reading Scene */}
 
                   {gameMode ===
                     'reading' && (
-
                     <div
                       style={{
-
                         backgroundColor:
                           '#fff',
 
@@ -1484,34 +1317,27 @@ function App() {
                           '1px solid #eee'
                       }}
                     >
-
-                      Scene {
-                        readingSceneIndex + 1
-                      } / {
-                        currentStoryData.length
-                      }
-
+                      Scene{' '}
+                      {readingSceneIndex + 1}
+                      {' / '}
+                      {currentStoryData.length}
                     </div>
-
                   )}
-
                 </div>
 
-
-                {/* RIGHT : TIMER */}
+                {/* Timer */}
 
                 <div
                   style={{
                     justifySelf: 'end',
                     minWidth: '160px',
                     display: 'flex',
-                    justifyContent: 'flex-end'
+                    justifyContent:
+                      'flex-end'
                   }}
                 >
-
                   {gameMode ===
                   'puzzle' ? (
-
                     <Timer
                       key={
                         `timer-${retryCount}`
@@ -1529,229 +1355,165 @@ function App() {
                         penaltySeconds
                       }
                     />
-
                   ) : (
-
                     <div
                       style={{
                         width: '160px'
                       }}
                     />
-
                   )}
-
                 </div>
-
               </div>
 
-
               {/* =================================================
-                  📖 READING MODE
+                  READING
               ================================================= */}
 
               {gameMode ===
                 'reading' && (
-
                 <StoryModeBoard
-
                   storyData={
                     currentStoryData
                   }
-
                   unit={
                     currentUnit
                   }
-
-                  // 🌟 StoryModeBoardから
-                  // Scene番号を受け取る
                   onSceneChange={
                     setReadingSceneIndex
                   }
-
                 />
-
               )}
 
-
               {/* =================================================
-                  🧩 PUZZLE MODE
+                  PUZZLE
               ================================================= */}
 
               {gameMode ===
                 'puzzle' && (
-
                 <MatchBoard
-
                   storyData={
                     currentStoryData
                   }
-
                   onGameStart={() =>
                     setIsStarted(true)
                   }
-
                   onGameClear={() =>
                     handleGameClear({
                       result:
                         finalTime || 0
                     })
                   }
-
                   onMistake={() =>
                     setMistakeCount(
                       prev => prev + 1
                     )
                   }
-
                   onRetry={
                     resetGameState
                   }
-
                   mistakeCount={
                     mistakeCount
                   }
-
                   unit={
                     currentUnit
                   }
-
                   isCleared={
                     isCleared
                   }
-
                   finalTime={
                     finalTime
                   }
-
                   bestTime={
                     bestTimes[
                       `${currentUnit}-L${level}`
                     ]
                   }
-
                   retryCount={
                     retryCount
                   }
-
                   onHintUsed={
                     handleAddPenalty
                   }
-
                   level={
                     level
                   }
-
                   studentInfo={
                     studentInfo
                   }
-
                 />
-
               )}
 
-
               {/* =================================================
-                  ⚡ RANDOM MODE
+                  RANDOM
               ================================================= */}
 
               {gameMode ===
                 'random' && (
-
                 <RandomModeBoard
-
                   storyData={
                     currentStoryData
                   }
-
                   unit={
                     currentUnit
                   }
-
                   retryCount={
                     retryCount
                   }
-
                   onRetry={
                     resetGameState
                   }
-
                   qCount={
                     qCount
                   }
-
-                  onGameClear={(
-                    score
-                  ) =>
+                  onGameClear={(score) =>
                     handleGameClear({
                       result: score
                     })
                   }
-
                   studentInfo={
                     studentInfo
                   }
-
                 />
-
               )}
 
-
               {/* =================================================
-                  🎧 LISTENING MODE
+                  LISTENING
               ================================================= */}
 
               {gameMode ===
                 'listening' && (
-
                 <ListeningModeBoard
-
                   storyData={
                     currentStoryData
                   }
-
                   unit={
                     currentUnit
                   }
-
                   retryCount={
                     retryCount
                   }
-
                   onRetry={
                     resetGameState
                   }
-
                   qCount={
                     qCount
                   }
-
-                  onGameClear={(
-                    score
-                  ) =>
+                  onGameClear={(score) =>
                     handleGameClear({
                       result: score
                     })
                   }
-
                   studentInfo={
                     studentInfo
                   }
-
                 />
-
               )}
-
             </>
-
           )}
-
         </div>
-
       ) : (
-
-
         // ========================================================
-        // DATAなし
+        // 本当にデータがないUnitだけ
         // ========================================================
 
         <div
@@ -1764,7 +1526,6 @@ function App() {
             color: '#888'
           }}
         >
-
           <div
             style={{
               fontSize: '5rem',
@@ -1787,13 +1548,10 @@ function App() {
               fontSize: '1.2rem'
             }}
           >
-            教材を作成中です。完成までお待ちください。
+            教材データがまだ登録されていません。
           </p>
-
         </div>
-
       )}
-
 
       {/* ========================================================
           GLOBAL STYLE
@@ -1802,17 +1560,14 @@ function App() {
       <style>{`
 
         .mode-card {
-
           cursor: pointer;
-
           padding: 40px 20px;
-
           background-color: #fff;
-
           border-radius: 25px;
 
           box-shadow:
-            0 10px 20px rgba(0,0,0,0.1);
+            0 10px 20px
+            rgba(0,0,0,0.1);
 
           width: 230px;
 
@@ -1823,20 +1578,17 @@ function App() {
             box-shadow 0.2s;
         }
 
-
         .mode-card:hover {
-
           transform:
             translateY(-10px);
 
           box-shadow:
-            0 15px 30px rgba(0,0,0,0.2);
+            0 15px 30px
+            rgba(0,0,0,0.2);
         }
-
 
         .level-btn,
         .count-btn {
-
           padding:
             20px 35px;
 
@@ -1857,33 +1609,30 @@ function App() {
             pointer;
 
           box-shadow:
-            0 6px 10px rgba(0,0,0,0.15);
+            0 6px 10px
+            rgba(0,0,0,0.15);
 
           transition:
             transform 0.2s,
             box-shadow 0.2s;
 
-          line-height: 1.4;
+          line-height:
+            1.4;
         }
-
 
         .level-btn:hover,
         .count-btn:hover {
-
           transform:
             scale(1.05);
 
           box-shadow:
-            0 8px 15px rgba(0,0,0,0.2);
+            0 8px 15px
+            rgba(0,0,0,0.2);
         }
-
-
-        /* 小さい画面 */
 
         @media (max-width: 900px) {
 
           .mode-card {
-
             width: 190px;
 
             padding:
@@ -1893,7 +1642,6 @@ function App() {
         }
 
       `}</style>
-
     </div>
   );
 }
