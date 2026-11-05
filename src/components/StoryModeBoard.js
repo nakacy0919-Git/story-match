@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { score, createFeedback } from "../utils/readingScore";
+import ReadingCelebration from "./ReadingCelebration";
 import { useReadingSpeech } from "../utils/useReadingSpeech";
 
 function Scene({
@@ -11,11 +12,14 @@ function Scene({
   onScore,
   onPrev,
   onNext,
+  onSkip,
   onBack,
 }) {
   const [result, setResult] = useState(null),
     [spoken, setSpoken] = useState("");
   const [audioError, setAudioError] = useState("");
+  const [celebration, setCelebration] = useState(0);
+  const celebrationTimer = useRef(null);
   const audio = useRef(null),
     feedback = useRef(null),
     utterance = useRef(null);
@@ -28,6 +32,9 @@ function Scene({
       if (percent >= 80) {
         if (!feedback.current) feedback.current = createFeedback(window);
         feedback.current.tone("80");
+        clearTimeout(celebrationTimer.current);
+        setCelebration(Date.now());
+        celebrationTimer.current = setTimeout(() => setCelebration(0), 2400);
       }
     },
     score,
@@ -41,9 +48,17 @@ function Scene({
     }
     window.speechSynthesis?.cancel();
   };
-  useEffect(() => () => stopAudio(), []);
+  useEffect(
+    () => () => {
+      stopAudio();
+      clearTimeout(celebrationTimer.current);
+    },
+    [],
+  );
   useEffect(() => {
     setResult(null);
+    setCelebration(0);
+    clearTimeout(celebrationTimer.current);
     setSpoken("");
     setAudioError("");
     stopAudio();
@@ -89,6 +104,7 @@ function Scene({
   const passed = best >= 80 || result >= 80;
   return (
     <section className="reading-studio">
+      {celebration > 0 && <ReadingCelebration id={celebration} />}
       <div className="reading-top">
         <span>
           Scene {index + 1} / {total}
@@ -185,6 +201,18 @@ function Scene({
               : "🎙 音読スタート"}
         </button>
         <button
+          className="subtle reading-skip"
+          disabled={mic.phase !== "idle" || passed}
+          onClick={() => {
+            mic.cancel();
+            stopAudio();
+            if (index === total - 1) onBack();
+            else onSkip();
+          }}
+        >
+          スキップ（未クリア）
+        </button>
+        <button
           className="primary next"
           disabled={!passed || mic.phase !== "idle"}
           onClick={() => {
@@ -223,6 +251,7 @@ export default function StoryModeBoard({
         if (scores[index] >= 80)
           setIndex((i) => Math.min(storyData.length - 1, i + 1));
       }}
+      onSkip={() => setIndex((i) => Math.min(storyData.length - 1, i + 1))}
       onBack={onBack}
     />
   );

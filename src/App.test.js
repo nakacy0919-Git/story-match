@@ -234,3 +234,29 @@ test("manual start in every scene remains inside the trusted click task", () => 
       fireEvent.click(screen.getByRole("button", { name: "次のシーンへ ▶" }));
   }
 });
+
+test("an 80 percent pass shows confetti and a skip never creates progress", () => {
+  render(<App />);
+  reading();
+  fireEvent.click(screen.getByRole("button", { name: "スキップ（未クリア）" }));
+  expect(screen.getByText("Scene 2 / 12")).toBeInTheDocument();
+  expect(
+    JSON.parse(localStorage.getItem(progressKey(student)))?.[2]?.reading?.[0],
+  ).toBeUndefined();
+  expect(screen.queryByTestId("reading-confetti")).not.toBeInTheDocument();
+  say("Doctor, I have lost my sense of taste.");
+  expect(screen.getByTestId("reading-confetti")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "← 学習進捗へ" }));
+  expect(screen.queryByText("ALL MISSIONS CLEAR!")).not.toBeInTheDocument();
+  reading();
+  expect(screen.getByText("Scene 1 / 12")).toBeInTheDocument();
+});
+test("a failed attempt does not show confetti", () => {
+  render(<App />);
+  reading();
+  say("unrelated");
+  expect(screen.queryByTestId("reading-confetti")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "スキップ（未クリア）" }),
+  ).toBeEnabled();
+});

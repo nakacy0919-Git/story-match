@@ -1276,3 +1276,38 @@ button {
     line-height: 1.35;
   }
 }
+.reading-confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  overflow: hidden;
+  pointer-events: none;
+}
+.reading-confetti i {
+  position: absolute;
+  top: -25px;
+  width: 9px;
+  height: 15px;
+  border-radius: 2px;
+  animation: reading-confetti-fall 2.1s ease-in forwards;
+}
+@keyframes reading-confetti-fall {
+  from {
+    transform: translate3d(0, -20px, 0) rotate(0);
+    opacity: 1;
+  }
+  to {
+    transform: translate3d(var(--drift), 105dvh, 0) rotate(var(--turn));
+    opacity: 0;
+  }
+}
+.reading-skip {
+  font-size: 11px;
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reading-confetti i {
+    animation: none;
+    display: none;
+  }
+}
