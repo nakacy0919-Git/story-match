@@ -8,19 +8,36 @@ function PuzzlePassage({ children }) {
   const ref = useRef(null);
   useLayoutEffect(() => {
     const el = ref.current;
+    let active = true;
+    const card = el.parentElement;
     const fit = () => {
+      if (!active) return;
+      const css = getComputedStyle(card);
+      const available =
+        card.clientHeight -
+        parseFloat(css.paddingTop) -
+        parseFloat(css.paddingBottom) -
+        24;
+      const maxText = Math.max(24, available - Math.max(44, available * 0.4));
       let size = 13;
+      el.style.height = "auto";
       el.style.fontSize = size + "px";
-      while (size > 8.5 && el.scrollHeight > el.clientHeight + 1) {
+      while (size > 8.5 && el.scrollHeight > maxText + 1) {
         size -= 0.5;
         el.style.fontSize = size + "px";
       }
+      // Use natural text height, leaving all remaining space for the picture.
+      el.style.height =
+        Math.min(el.scrollHeight, Math.max(24, available - 32)) + "px";
     };
     fit();
     const observer = new ResizeObserver(fit);
-    observer.observe(el);
+    observer.observe(card);
     document.fonts?.ready.then(fit);
-    return () => observer.disconnect();
+    return () => {
+      active = false;
+      observer.disconnect();
+    };
   }, [text]);
   return (
     <p className="puzzle-passage" ref={ref}>
@@ -58,7 +75,8 @@ export default function MatchBoard({
     [hints, setHints] = useState([]),
     [error, setError] = useState(null),
     [drag, setDrag] = useState(null),
-    [detail, setDetail] = useState(null);
+    [detail, setDetail] = useState(null),
+    [newMatches, setNewMatches] = useState([]);
   const timer = useRef(null),
     gesture = useRef(null),
     board = useRef(null),
@@ -92,8 +110,9 @@ export default function MatchBoard({
     if (card === slot) {
       const next = [...placed, slot];
       setPlaced(next);
+      setNewMatches((previous) => [...previous, slot]);
       setSelected(null);
-      playSound("correct");
+      playSound("puzzle-correct");
       if (next.length === storyData.length && !completeRef.current) {
         completeRef.current = true;
         onGameClear();
@@ -159,6 +178,7 @@ export default function MatchBoard({
               className={
                 "puzzle-slot " +
                 (placed.includes(i) ? "matched " : "") +
+                (newMatches.includes(i) ? "just-matched " : "") +
                 (error === i ? "wrong" : "")
               }
             >
@@ -191,7 +211,14 @@ export default function MatchBoard({
                 onClick={() => place(selected, i)}
               >
                 {placed.includes(i) ? (
-                  image(i)
+                  <>
+                    <span className="placed-image">{image(i)}</span>
+                    <span className="puzzle-correct-mark" aria-label="正解">
+                      <svg viewBox="0 0 40 40" aria-hidden="true">
+                        <circle cx="20" cy="20" r="14" pathLength="100" />
+                      </svg>
+                    </span>
+                  </>
                 ) : (
                   <span>{selected !== null ? "ここに置く" : i + 1}</span>
                 )}
