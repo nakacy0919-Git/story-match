@@ -28,7 +28,9 @@ const RandomModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGameC
     const shuffled = makeQuestions(storyData.length, qCount);
     setQuestions(shuffled);
     setCurrentIndex(0); setScore(0); setIsCleared(false);
-    generateChoices(shuffled[0]);
+    setChoices(makeChoices(storyData.length, shuffled[0]));
+    setQuestionStartTime(Date.now());
+    setFeedback(null);
   }, [unit, retryCount, storyData, qCount]);
 
   const generateChoices = (correctId) => {
