@@ -86,7 +86,12 @@ function Scene({
           {passed ? "✓ CLEAR" : "Accuracy 80%以上で合格"}
         </span>
       </div>
-      <div className="reading-main">
+      <div
+        className={
+          "reading-main " +
+          (item.en.length + item.ja.length * 0.5 > 190 ? "dense" : "")
+        }
+      >
         <div className="reading-image">
           <img
             src={`${process.env.PUBLIC_URL}/images/unit${unit}/${index + 1}.webp`}

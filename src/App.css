@@ -905,3 +905,38 @@ button {
     font-size: 10px;
   }
 }
+.reading-main.dense .reading-image {
+  width: 35%;
+}
+.reading-main.dense .reading-text {
+  padding: 12px 20px;
+}
+.reading-main.dense .reading-english {
+  font-size: clamp(18px, 1.8vw, 26px);
+  line-height: 1.4;
+  margin: 12px 0;
+}
+.reading-main.dense .reading-japanese {
+  font-size: 13px;
+  line-height: 1.5;
+  padding-top: 10px;
+}
+@media (max-height: 740px) and (min-width: 701px) {
+  .reading-main.dense .reading-english {
+    font-size: 18px;
+    margin: 8px 0;
+  }
+  .reading-main.dense .reading-japanese {
+    font-size: 12px;
+    margin: 8px 0;
+    padding-top: 8px;
+  }
+  .reading-main.dense .subtle {
+    padding: 6px 10px;
+  }
+}
+@media (max-width: 700px) {
+  .reading-main.dense .reading-image {
+    width: 100%;
+  }
+}
