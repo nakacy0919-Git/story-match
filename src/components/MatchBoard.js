@@ -1,8 +1,33 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { shuffle } from "../utils/game";
 import { playSound } from "../utils/sound";
 // Pointer hit testing supports a wrapping image grid without DnD's one-axis
 // collision assumptions. Tap an image then a slot also works on touch devices.
+function PuzzlePassage({ children }) {
+  const text = React.Children.toArray(children).join("");
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const fit = () => {
+      let size = 13;
+      el.style.fontSize = size + "px";
+      while (size > 8.5 && el.scrollHeight > el.clientHeight + 1) {
+        size -= 0.5;
+        el.style.fontSize = size + "px";
+      }
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    document.fonts?.ready.then(fit);
+    return () => observer.disconnect();
+  }, [text]);
+  return (
+    <p className="puzzle-passage" ref={ref}>
+      {children}
+    </p>
+  );
+}
 export default function MatchBoard({
   storyData,
   unit,
@@ -31,7 +56,8 @@ export default function MatchBoard({
   const [selected, setSelected] = useState(null),
     [hints, setHints] = useState([]),
     [error, setError] = useState(null),
-    [drag, setDrag] = useState(null);
+    [drag, setDrag] = useState(null),
+    [detail, setDetail] = useState(null);
   const timer = useRef(null),
     gesture = useRef(null),
     board = useRef(null),
@@ -135,26 +161,26 @@ export default function MatchBoard({
                 (error === i ? "wrong" : "")
               }
             >
-              <p>
+              <PuzzlePassage>
                 {i + 1}. {item.en}
-              </p>
+              </PuzzlePassage>
               <div className="slot-translation">
-                {placed.includes(i) || hints.includes(i) ? (
-                  item.ja
-                ) : (
-                  <button
-                    onClick={() => {
-                      if (!hints.includes(i)) {
-                        begin();
-                        penalties.current += 10;
-                        onHintUsed(10);
-                        setHints([...hints, i]);
-                      }
-                    }}
-                  >
-                    💡 ヒント +10秒
-                  </button>
-                )}
+                <button
+                  aria-label={"Scene " + (i + 1) + " のヒント"}
+                  onClick={() => {
+                    if (!placed.includes(i) && !hints.includes(i)) {
+                      begin();
+                      penalties.current += 10;
+                      onHintUsed(10);
+                      setHints([...hints, i]);
+                    }
+                    setDetail(i);
+                  }}
+                >
+                  {placed.includes(i) || hints.includes(i)
+                    ? "英文・訳を確認"
+                    : "💡 ヒント +10秒"}
+                </button>
               </div>
               <button
                 className="drop-target"
@@ -220,6 +246,28 @@ export default function MatchBoard({
           )}
         </aside>
       </div>
+      {detail !== null && (
+        <div className="puzzle-detail-backdrop" onClick={() => setDetail(null)}>
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label={"Scene " + (detail + 1) + " のヒント"}
+            className="puzzle-detail"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              autoFocus
+              className="subtle"
+              onClick={() => setDetail(null)}
+            >
+              閉じる
+            </button>
+            <h3>Scene {detail + 1}</h3>
+            <p>{storyData[detail].en}</p>
+            <p>{storyData[detail].ja}</p>
+          </section>
+        </div>
+      )}
       {drag && (
         <div className="drag-preview" style={{ left: drag.x, top: drag.y }}>
           {image(drag.id)}

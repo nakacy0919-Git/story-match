@@ -9,6 +9,10 @@ export function useReadingSpeech(sentence, onScore, calculate) {
   );
   const session = useRef(null),
     scoreRef = useRef(onScore);
+  // Keep a single idle recognizer across scenes. WebKit can silently fail when
+  // a new recognizer takes over while the previous service is still closing.
+  const recognizerRef = useRef(null),
+    readyAt = useRef(0);
   scoreRef.current = onScore;
   const dispose = () => {
     const s = session.current;
@@ -18,13 +22,26 @@ export function useReadingSpeech(sentence, onScore, calculate) {
     clearTimeout(s.health);
     clearTimeout(s.finishTimer);
     if (s.rec) {
-      s.rec.onend = s.rec.onresult = s.rec.onerror = null;
+      s.rec.onstart =
+        s.rec.onaudiostart =
+        s.rec.onspeechstart =
+        s.rec.onend =
+        s.rec.onresult =
+        s.rec.onerror =
+          null;
+      recognizerRef.current = null;
+      readyAt.current = Date.now() + 500;
       try {
         s.rec.abort();
       } catch (_) {}
     }
   };
-  useEffect(() => () => dispose(), [sentence]);
+  useEffect(() => {
+    setPhase("idle");
+    setTranscript("");
+    setStatus("音読スタートを押して、英文を最後まで読みましょう。");
+    return () => dispose();
+  }, [sentence]);
   const begin = () => {
     if (session.current) return;
     const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -41,11 +58,14 @@ export function useReadingSpeech(sentence, onScore, calculate) {
       interim: "",
       stopping: false,
       recoveries: 0,
+      startRecoveries: 0,
     };
     session.current = s;
     setTranscript("");
-    setPhase("listening");
-    setStatus("🔴 音読中です。読み終えたら「終了・判定」を押してください。");
+    setPhase("connecting");
+    setStatus(
+      "マイクに接続しています。接続済みの表示を待ってから読みましょう。",
+    );
     const finish = () => {
       if (session.current !== s) return;
       const spoken = [s.final, s.interim].filter(Boolean).join(" ").trim();
@@ -67,7 +87,8 @@ export function useReadingSpeech(sentence, onScore, calculate) {
       if (session.current !== s || s.stopping) return;
       let r;
       try {
-        r = new Speech();
+        r = recognizerRef.current || new Speech();
+        recognizerRef.current = r;
       } catch (_) {
         dispose();
         setPhase("idle");
@@ -83,7 +104,16 @@ export function useReadingSpeech(sentence, onScore, calculate) {
       const current = () => session.current === s && s.rec === r;
       s.health = setTimeout(() => {
         if (!current() || s.stopping) return;
-        r.onresult = r.onend = r.onerror = null;
+        r.onstart =
+          r.onaudiostart =
+          r.onspeechstart =
+          r.onresult =
+          r.onend =
+          r.onerror =
+            null;
+        s.rec = null;
+        recognizerRef.current = null;
+        readyAt.current = Date.now() + 500;
         try {
           r.abort();
         } catch (_) {}
@@ -100,6 +130,14 @@ export function useReadingSpeech(sentence, onScore, calculate) {
         );
         s.restart = setTimeout(listen, 500);
       }, 8000);
+      r.onstart = () => {
+        if (current() && !s.stopping) {
+          setPhase("listening");
+          setStatus(
+            "🔴 マイク接続済み。英文を読み、読み終えたら「終了・判定」を押してください。",
+          );
+        }
+      };
       r.onresult = (e) => {
         if (!current()) return;
         const finals = [],
@@ -111,6 +149,7 @@ export function useReadingSpeech(sentence, onScore, calculate) {
         }
         if (!finals.length && !interims.length) return;
         clearTimeout(s.health);
+        if (!s.stopping) setPhase("listening");
         s.final = [previous, ...finals].filter(Boolean).join(" ");
         s.interim = interims.join(" ");
         setTranscript([s.final, s.interim].filter(Boolean).join(" "));
@@ -137,23 +176,38 @@ export function useReadingSpeech(sentence, onScore, calculate) {
         if (!current()) return;
         clearTimeout(s.health);
         s.rec = null;
+        readyAt.current = Date.now() + 350;
         if (s.stopping) {
           finish();
           return;
         }
         s.final = [s.final, s.interim].filter(Boolean).join(" ");
         s.interim = "";
-        s.restart = setTimeout(listen, 250);
+        s.restart = setTimeout(listen, 350);
       };
       try {
         r.start();
-      } catch (_) {
-        dispose();
-        setPhase("idle");
-        setStatus("音声認識を開始できませんでした。もう一度お試しください。");
+      } catch (error) {
+        if (error.name === "InvalidStateError" && s.startRecoveries++ < 1) {
+          clearTimeout(s.health);
+          r.onstart = r.onresult = r.onend = r.onerror = null;
+          s.rec = null;
+          recognizerRef.current = null;
+          try {
+            r.abort();
+          } catch (_) {}
+          setStatus("前のマイク接続を終了しています。自動で再接続します。");
+          s.restart = setTimeout(listen, 500);
+        } else {
+          dispose();
+          setPhase("idle");
+          setStatus("音声認識を開始できませんでした。もう一度お試しください。");
+        }
       }
     };
-    listen();
+    const delay = Math.max(0, readyAt.current - Date.now());
+    if (delay) s.restart = setTimeout(listen, delay);
+    else listen();
   };
   const stop = () => {
     const s = session.current;
@@ -171,5 +225,10 @@ export function useReadingSpeech(sentence, onScore, calculate) {
       }
     } else s.finish();
   };
-  return { phase, transcript, status, begin, stop };
+  const reconnect = () => {
+    dispose();
+    recognizerRef.current = null;
+    begin();
+  };
+  return { phase, transcript, status, begin, stop, reconnect };
 }

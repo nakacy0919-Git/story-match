@@ -13,8 +13,11 @@ const student = { class: "3-2", number: "8", name: "Test Student" };
 class SpeechMock {
   constructor() {
     SpeechMock.latest = this;
+    SpeechMock.count = (SpeechMock.count || 0) + 1;
   }
-  start() {}
+  start() {
+    this.onstart?.();
+  }
   stop() {
     this.onend?.();
   }
@@ -26,6 +29,11 @@ class SpeechMock {
   }
 }
 beforeEach(() => {
+  global.ResizeObserver = class {
+    observe() {}
+    disconnect() {}
+  };
+  SpeechMock.count = 0;
   localStorage.clear();
   localStorage.setItem("storyMatchStudent", JSON.stringify(student));
   window.SpeechRecognition = SpeechMock;
@@ -45,6 +53,7 @@ const reading = () =>
   fireEvent.click(screen.getByRole("button", { name: /📖.*じっくり学習/ }));
 const say = (text) => {
   fireEvent.click(screen.getByRole("button", { name: "🎙 音読スタート" }));
+  act(() => jest.advanceTimersByTime(350));
   act(() => SpeechMock.latest.say(text));
   fireEvent.click(screen.getByRole("button", { name: "■ 終了・判定" }));
 };
@@ -106,4 +115,92 @@ test("tap placement completes puzzle once and records elapsed seconds", () => {
   const p = JSON.parse(localStorage.getItem(progressKey(student)));
   expect(p[2].puzzle[1].best).toBe(6);
   expect(JSON.parse(localStorage.getItem("storyMatchHistory"))).toHaveLength(1);
+});
+
+test("the same microphone transcribes scenes 1, 2 and 3 without recreating the service", () => {
+  render(<App />);
+  reading();
+  const lines = [
+    "Colin wanted to get easy money from the hospital.",
+    'Colin: "Doctor, I have lost my sense of taste."',
+    'Doctor: "Nurse, please bring the medicine from box 22."',
+  ];
+  for (let i = 0; i < lines.length; i++) {
+    say(lines[i]);
+    expect(
+      JSON.parse(localStorage.getItem(progressKey(student)))[2].reading[i],
+    ).toBe(100);
+    expect(SpeechMock.count).toBe(1);
+    if (i < 2)
+      fireEvent.click(screen.getByRole("button", { name: "次のシーンへ ▶" }));
+  }
+});
+test("silent recognizers reconnect and do not leak the previous scene transcript", () => {
+  render(<App />);
+  reading();
+  say("Colin wanted to get easy money from the hospital.");
+  fireEvent.click(screen.getByRole("button", { name: "次のシーンへ ▶" }));
+  fireEvent.click(screen.getByRole("button", { name: "🎙 音読スタート" }));
+  act(() => jest.advanceTimersByTime(8850));
+  expect(SpeechMock.count).toBe(2);
+  act(() =>
+    SpeechMock.latest.say("Colin: Doctor, I have lost my sense of taste."),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "■ 終了・判定" }));
+  expect(
+    JSON.parse(localStorage.getItem(progressKey(student)))[2].reading[1],
+  ).toBe(100);
+});
+test("mission workspaces omit the title and student profile", () => {
+  render(<App />);
+  reading();
+  expect(screen.queryByText("Test Student")).not.toBeInTheDocument();
+  expect(screen.queryByText("Story Match")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "← 学習進捗へ" }));
+  expect(screen.getByText("Test Student")).toBeInTheDocument();
+});
+
+test("a delayed WebKit shutdown cannot block or overwrite the next scene", () => {
+  render(<App />);
+  reading();
+  fireEvent.click(screen.getByRole("button", { name: "🎙 音読スタート" }));
+  const old = SpeechMock.latest;
+  old.stop = () => {};
+  act(() => old.say("Colin wanted to get easy money from the hospital."));
+  fireEvent.click(screen.getByRole("button", { name: "■ 終了・判定" }));
+  act(() => jest.advanceTimersByTime(1600));
+  expect(old.onresult).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "次のシーンへ ▶" }));
+  fireEvent.click(screen.getByRole("button", { name: "🎙 音読スタート" }));
+  act(() => jest.advanceTimersByTime(500));
+  expect(SpeechMock.count).toBe(2);
+  act(() =>
+    SpeechMock.latest.say("Colin: Doctor, I have lost my sense of taste."),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "■ 終了・判定" }));
+  expect(
+    JSON.parse(localStorage.getItem(progressKey(student)))[2].reading[1],
+  ).toBe(100);
+});
+
+test("a recognizer still closing in WebKit is replaced automatically", () => {
+  render(<App />);
+  reading();
+  say("Colin wanted to get easy money from the hospital.");
+  SpeechMock.latest.start = () => {
+    const e = new Error("closing");
+    e.name = "InvalidStateError";
+    throw e;
+  };
+  fireEvent.click(screen.getByRole("button", { name: "次のシーンへ ▶" }));
+  fireEvent.click(screen.getByRole("button", { name: "🎙 音読スタート" }));
+  act(() => jest.advanceTimersByTime(850));
+  expect(SpeechMock.count).toBe(2);
+  act(() =>
+    SpeechMock.latest.say("Colin: Doctor, I have lost my sense of taste."),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "■ 終了・判定" }));
+  expect(
+    JSON.parse(localStorage.getItem(progressKey(student)))[2].reading[1],
+  ).toBe(100);
 });

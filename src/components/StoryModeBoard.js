@@ -41,6 +41,12 @@ function Scene({
     window.speechSynthesis?.cancel();
   };
   useEffect(() => () => stopAudio(), []);
+  useEffect(() => {
+    setResult(null);
+    setSpoken("");
+    setAudioError("");
+    stopAudio();
+  }, [unit, index]);
   const play = () => {
     stopAudio();
     setAudioError("");
@@ -128,6 +134,13 @@ function Scene({
           </p>
           <small role="status">{mic.status}</small>
         </div>
+        <button
+          className="subtle reconnect-mic"
+          onClick={mic.reconnect}
+          disabled={mic.phase === "scoring"}
+        >
+          マイクを再接続
+        </button>
       </div>
       {audioError && <p role="alert">{audioError}</p>}
       <div className="reading-controls">
@@ -140,7 +153,7 @@ function Scene({
         </button>
         <button
           className="primary"
-          disabled={mic.phase === "scoring"}
+          disabled={mic.phase === "scoring" || mic.phase === "connecting"}
           onClick={() => {
             if (mic.phase === "listening") mic.stop();
             else {
@@ -152,9 +165,11 @@ function Scene({
         >
           {mic.phase === "listening"
             ? "■ 終了・判定"
-            : mic.phase === "scoring"
-              ? "判定中…"
-              : "🎙 音読スタート"}
+            : mic.phase === "connecting"
+              ? "マイク接続中…"
+              : mic.phase === "scoring"
+                ? "判定中…"
+                : "🎙 音読スタート"}
         </button>
         <button
           className="primary next"
@@ -180,7 +195,6 @@ export default function StoryModeBoard({
   });
   return (
     <Scene
-      key={unit + "-" + index}
       item={storyData[index]}
       index={index}
       total={storyData.length}
