@@ -102,3 +102,49 @@ test("settings API authenticates writes, validates numbers, and shares persisted
     delete process.env.VERCEL_ENV;
   }
 });
+
+test("password formatting is normalized and failures distinguish throttling", async () => {
+  const old = process.env.STORY_MATCH_ADMIN_PASSWORD;
+  process.env.STORY_MATCH_ADMIN_PASSWORD = "24680";
+  const handler = createHandler();
+  const call = async (password, ip = "normalization-client") => {
+    const res = {
+      headers: {},
+      setHeader(k, v) {
+        this.headers[k] = v;
+      },
+      status(n) {
+        this.code = n;
+        return this;
+      },
+      json(data) {
+        this.data = data;
+        return this;
+      },
+    };
+    await handler(
+      {
+        method: "POST",
+        body: { action: "verify", password },
+        headers: { "x-forwarded-for": ip },
+      },
+      res,
+    );
+    return res;
+  };
+  try {
+    assert.equal((await call("２４６８０")).code, 200);
+    assert.equal((await call(" 24680\n")).code, 200);
+    assert.equal((await call("2468")).code, 401);
+    for (let i = 0; i < 15; i++)
+      assert.equal((await call("wrong", "throttle-client")).code, 401);
+    const limited = await call("wrong", "throttle-client");
+    assert.equal(limited.code, 429);
+    assert.ok(Number(limited.headers["Retry-After"]) > 0);
+    delete process.env.STORY_MATCH_ADMIN_PASSWORD;
+    assert.equal((await call("24680")).code, 503);
+  } finally {
+    if (old === undefined) delete process.env.STORY_MATCH_ADMIN_PASSWORD;
+    else process.env.STORY_MATCH_ADMIN_PASSWORD = old;
+  }
+});

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { DEFAULT_RULES, validateRules } from "../utils/missionRules";
 export default function AdminSettings({ rules, onSave, onBack }) {
+  const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState(""),
     [unlocked, setUnlocked] = useState(false),
     [draft, setDraft] = useState({ ...rules }),
@@ -65,14 +66,28 @@ export default function AdminSettings({ rules, onSave, onBack }) {
             <label>
               管理者パスワード
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 inputMode="numeric"
                 autoComplete="current-password"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value.normalize("NFKC"))}
               />
             </label>
+            <p>
+              数字5桁で入力してください。全角数字・前後の空白も自動で整えます。
+            </p>
+            <button
+              type="button"
+              className="subtle"
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword((v) => !v)}
+            >
+              {showPassword ? "パスワードを隠す" : "入力したパスワードを表示"}
+            </button>
             <button className="primary" disabled={busy}>
               ログイン
             </button>
