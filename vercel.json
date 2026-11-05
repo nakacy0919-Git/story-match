@@ -1,0 +1,4 @@
+{
+  "buildCommand": "PUBLIC_URL=/ npm run build",
+  "outputDirectory": "build"
+}

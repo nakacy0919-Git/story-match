@@ -1,27 +1,6 @@
-import React, { useState, useEffect } from 'react';
-
-const playSound = (type) => {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  if (type === 'correct') {
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'sine'; osc.frequency.setValueAtTime(880, ctx.currentTime);
-    gain.gain.setValueAtTime(0, ctx.currentTime); gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05);
-    osc.start(); osc.stop(ctx.currentTime + 0.3);
-  } else if (type === 'wrong') {
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'triangle'; osc.frequency.setValueAtTime(150, ctx.currentTime);
-    gain.gain.setValueAtTime(0, ctx.currentTime); gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-    osc.start(); osc.stop(ctx.currentTime + 0.3);
-  } else if (type === 'fanfare') {
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'square'; [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => { osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.15); });
-    gain.gain.setValueAtTime(0, ctx.currentTime); gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.05);
-    osc.start(); osc.stop(ctx.currentTime + 1.2);
-  }
-};
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { makeQuestions, makeChoices, deferQuestion } from '../utils/game';
+import { playSound } from '../utils/sound';
 
 const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGameClear, studentInfo }) => {
   const [isStarted, setIsStarted] = useState(false);
@@ -33,118 +12,149 @@ const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGa
   const [questionStartTime, setQuestionStartTime] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
-  useEffect(() => {
-    if (!storyData) return;
-    const allIndices = [...Array(12).keys()].sort(() => Math.random() - 0.5);
-    const initialQuestions = allIndices.slice(0, qCount === 'ALL' ? 12 : qCount);
-    
-    setQuestions(initialQuestions);
-    setCurrentQueueIndex(0); setScore(0); setIsCleared(false); setIsStarted(false);
-    generateChoices(initialQuestions[0]);
-    
-    return () => window.speechSynthesis.cancel();
-  }, [unit, retryCount, storyData, qCount]);
+  const timersRef = useRef([]);
+  const speechTimerRef = useRef(null);
+  const utteranceRef = useRef(null);
+  const lastSpokenIndexRef = useRef(null);
+  const [audioError, setAudioError] = useState(false);
 
-  useEffect(() => {
-    if (isStarted && !isCleared && !feedback) {
-      speakText();
+  const cancelTimers = useCallback(() => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+  }, []);
+
+  const stopSpeech = useCallback(() => {
+    clearTimeout(speechTimerRef.current);
+    speechTimerRef.current = null;
+    utteranceRef.current = null;
+    if (window.speechSynthesis) {
+      try { window.speechSynthesis.cancel(); } catch (error) { /* no audio */ }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentQueueIndex, isStarted]); 
+  }, []);
 
-  const generateChoices = (correctId) => {
+  const generateChoices = useCallback((correctId) => {
     if (correctId === undefined) return;
-    const wrongPool = [...Array(12).keys()].filter(id => id !== correctId);
-    const wrongIds = wrongPool.sort(() => Math.random() - 0.5).slice(0, 2);
-    setChoices([correctId, ...wrongIds].sort(() => Math.random() - 0.5));
-    setQuestionStartTime(Date.now()); 
+    setChoices(makeChoices(storyData?.length || 0, correctId));
+    setQuestionStartTime(Date.now());
     setFeedback(null);
-  };
+  }, [storyData]);
 
-  // 🌟 究極の音声フリーズ回避 ＋ 高音質ネイティブボイス選択処理
-  const speakText = () => {
-    if (!questions[currentQueueIndex] || !storyData) return;
-    
+  useEffect(() => {
+    cancelTimers();
+    stopSpeech();
+    lastSpokenIndexRef.current = null;
+    if (!Array.isArray(storyData) || storyData.length === 0) return;
+    const nextQuestions = makeQuestions(storyData.length, qCount);
+    setQuestions(nextQuestions);
+    setCurrentQueueIndex(0);
+    setScore(0);
+    setIsCleared(false);
+    setIsStarted(false);
+    setAudioError(false);
+    generateChoices(nextQuestions[0]);
+    return () => {
+      cancelTimers();
+      stopSpeech();
+    };
+  }, [unit, retryCount, storyData, qCount, cancelTimers, stopSpeech, generateChoices]);
+
+  const speakText = useCallback((questionId, immediate = false) => {
+    const item = storyData?.[questionId];
+    if (!item) return;
+    stopSpeech();
     const synth = window.speechSynthesis;
-    synth.resume();
-    synth.cancel();
+    const Utterance = window.SpeechSynthesisUtterance;
+    if (!synth || !Utterance) {
+      setAudioError(true);
+      return;
+    }
 
-    setTimeout(() => {
-      const text = storyData[questions[currentQueueIndex]].en;
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      // 🌟 生徒が聞き取りやすいように少しだけゆっくりに
-      utterance.rate = 0.85; 
-      utterance.lang = 'en-US';
-
-      // 🌟 デバイス内にある「一番ネイティブに近い高音質ボイス」を探してセットする
-      const voices = synth.getVoices();
-      const bestVoice = 
-        voices.find(v => v.name.includes('Google US English')) || // Chrome用（高音質）
-        voices.find(v => v.name.includes('Samantha')) ||          // Safari/iOS用（滑らか）
-        voices.find(v => v.name.includes('Alex')) ||              // Mac用
-        voices.find(v => v.lang === 'en-US' && v.localService === false) || // Edge等のクラウド音声
-        voices.find(v => v.lang === 'en-US');                     // 見つからなければ標準の英語
-
-      if (bestVoice) {
-        utterance.voice = bestVoice;
+    const start = () => {
+      try {
+        const utterance = new Utterance(item.en);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.85;
+        const voices = synth.getVoices();
+        const bestVoice = voices.find(voice => voice.name.includes('Google US English')) ||
+          voices.find(voice => voice.name.includes('Samantha')) ||
+          voices.find(voice => voice.lang === 'en-US') ||
+          voices.find(voice => voice.lang.startsWith('en'));
+        if (bestVoice) utterance.voice = bestVoice;
+        utteranceRef.current = utterance;
+        utterance.onerror = event => {
+          if (utteranceRef.current === utterance && event.error !== 'canceled' && event.error !== 'interrupted') {
+            setAudioError(true);
+          }
+        };
+        Promise.resolve(synth.resume()).catch(() => {});
+        synth.speak(utterance);
+        setAudioError(false);
+      } catch (error) {
+        setAudioError(true);
+        console.warn('Speech synthesis unavailable:', error);
       }
+    };
 
-      window.currentUtteranceHack = utterance;
-      synth.speak(utterance);
-    }, 300);
-  };
+    // Starting inside the gesture is important on Safari/iPad.
+    if (immediate) start();
+    else speechTimerRef.current = setTimeout(start, 200);
+  }, [storyData, stopSpeech]);
+
+  useEffect(() => {
+    if (isStarted && !isCleared && questions[currentQueueIndex] !== undefined &&
+        lastSpokenIndexRef.current !== currentQueueIndex) {
+      lastSpokenIndexRef.current = currentQueueIndex;
+      speakText(questions[currentQueueIndex]);
+    }
+  }, [currentQueueIndex, isStarted, isCleared, questions, speakText]);
 
   const handleStartGame = () => {
+    if (questions.length === 0) return;
     setIsStarted(true);
     setQuestionStartTime(Date.now());
+    lastSpokenIndexRef.current = 0;
+    speakText(questions[0], true);
   };
 
-  // 🌟 音声エラー時のスキップ処理
   const handleSkip = () => {
     if (feedback || isCleared || !isStarted) return;
-    
-    window.speechSynthesis.cancel();
-    const currentQuestionId = questions[currentQueueIndex];
-
-    // 今の問題を配列の最後に追加し直す（再出題）
-    setQuestions(prev => [...prev, currentQuestionId]);
-    
-    // 次の問題へ（スコアは計算しない）
-    const nextIdx = currentQueueIndex + 1;
-    setCurrentQueueIndex(nextIdx);
-    generateChoices(questions[nextIdx]);
+    stopSpeech();
+    // Requeue the skipped last question so the next index is always valid.
+    const nextQuestions = deferQuestion(questions, currentQueueIndex);
+    const nextIndex = currentQueueIndex + 1;
+    setQuestions(nextQuestions);
+    setCurrentQueueIndex(nextIndex);
+    lastSpokenIndexRef.current = null;
+    generateChoices(nextQuestions[nextIndex]);
   };
 
   const handleChoiceClick = (id) => {
     if (feedback || isCleared || !isStarted) return;
-    
-    window.speechSynthesis.cancel(); 
+    stopSpeech();
 
     if (id === questions[currentQueueIndex]) {
       playSound('correct');
       setFeedback({ status: 'correct', id });
-      
-      const timeElapsed = (Date.now() - questionStartTime) / 1000;
-      const points = Math.max(10, Math.floor(100 - (timeElapsed * 15)));
-      setScore(prev => prev + points);
-      
-      setTimeout(() => {
-        const nextIdx = currentQueueIndex + 1;
-        if (nextIdx < questions.length) {
-          setCurrentQueueIndex(nextIdx);
-          generateChoices(questions[nextIdx]);
+      const elapsed = Math.max(0, (Date.now() - questionStartTime) / 1000);
+      const points = Math.max(10, Math.floor(100 - elapsed * 15));
+      setScore(previous => previous + points);
+      timersRef.current.push(setTimeout(() => {
+        const nextIndex = currentQueueIndex + 1;
+        if (nextIndex < questions.length) {
+          lastSpokenIndexRef.current = null;
+          setCurrentQueueIndex(nextIndex);
+          generateChoices(questions[nextIndex]);
         } else {
           setIsCleared(true);
           playSound('fanfare');
           onGameClear(score + points);
         }
-      }, 800);
+      }, 800));
     } else {
       playSound('wrong');
       setFeedback({ status: 'wrong', id });
-      setScore(prev => Math.max(0, prev - 20)); 
-      setTimeout(() => setFeedback(null), 500);
+      setScore(previous => Math.max(0, previous - 20));
+      timersRef.current.push(setTimeout(() => setFeedback(null), 500));
     }
   };
 
@@ -201,6 +211,7 @@ const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGa
       
       <div style={{ width: '100%', maxWidth: '900px', flex: 1, backgroundColor: '#f3e5f5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '20px', borderRadius: '20px', border: '3px solid #ce93d8', boxSizing: 'border-box', position: 'relative' }}>
         <p style={{ color: '#8e24aa', fontWeight: 'bold', margin: '0 0 10px', fontSize: '1.5rem' }}>⚡ 早押しリスニング ⚡</p>
+        {audioError && <p role="alert" style={{ color: '#b71c1c', fontWeight: 'bold', textAlign: 'center' }}>音声を再生できません。もう一度聞くか、スキップして再挑戦してください。</p>}
         <div className="sound-wave">
           <div className="wave-bar"></div><div className="wave-bar"></div><div className="wave-bar"></div><div className="wave-bar"></div><div className="wave-bar"></div>
         </div>
@@ -208,7 +219,7 @@ const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGa
         <div style={{ display: 'flex', gap: '15px', position: 'absolute', bottom: '15px', right: '20px' }}>
           {/* 🌟 音声が聞こえないボタン */}
           <button onClick={handleSkip} className="skip-btn">⚠️ 音声が聞こえない</button>
-          <button onClick={speakText} className="repeat-btn">🔁 もう一度聞く</button>
+          <button onClick={() => speakText(questions[currentQueueIndex], true)} className="repeat-btn">🔁 もう一度聞く</button>
         </div>
       </div>
       
