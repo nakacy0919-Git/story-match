@@ -1,8 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { makeQuestions, makeChoices, deferQuestion } from '../utils/game';
-import { playSound } from '../utils/sound';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { makeQuestions, makeChoices, deferQuestion } from "../utils/game";
+import { playSound } from "../utils/sound";
 
-const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGameClear, studentInfo }) => {
+const ListeningModeBoard = ({
+  storyData,
+  unit,
+  retryCount,
+  onRetry,
+  qCount,
+  onGameClear,
+  studentInfo,
+}) => {
   const [isStarted, setIsStarted] = useState(false);
   const [questions, setQuestions] = useState([]); // 🌟 出題予定のキュー
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0); // 🌟 何問目か
@@ -28,16 +36,23 @@ const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGa
     speechTimerRef.current = null;
     utteranceRef.current = null;
     if (window.speechSynthesis) {
-      try { window.speechSynthesis.cancel(); } catch (error) { /* no audio */ }
+      try {
+        window.speechSynthesis.cancel();
+      } catch (error) {
+        /* no audio */
+      }
     }
   }, []);
 
-  const generateChoices = useCallback((correctId) => {
-    if (correctId === undefined) return;
-    setChoices(makeChoices(storyData?.length || 0, correctId));
-    setQuestionStartTime(Date.now());
-    setFeedback(null);
-  }, [storyData]);
+  const generateChoices = useCallback(
+    (correctId) => {
+      if (correctId === undefined) return;
+      setChoices(makeChoices(storyData?.length || 0, correctId));
+      setQuestionStartTime(Date.now());
+      setFeedback(null);
+    },
+    [storyData],
+  );
 
   useEffect(() => {
     cancelTimers();
@@ -56,53 +71,73 @@ const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGa
       cancelTimers();
       stopSpeech();
     };
-  }, [unit, retryCount, storyData, qCount, cancelTimers, stopSpeech, generateChoices]);
+  }, [
+    unit,
+    retryCount,
+    storyData,
+    qCount,
+    cancelTimers,
+    stopSpeech,
+    generateChoices,
+  ]);
 
-  const speakText = useCallback((questionId, immediate = false) => {
-    const item = storyData?.[questionId];
-    if (!item) return;
-    stopSpeech();
-    const synth = window.speechSynthesis;
-    const Utterance = window.SpeechSynthesisUtterance;
-    if (!synth || !Utterance) {
-      setAudioError(true);
-      return;
-    }
-
-    const start = () => {
-      try {
-        const utterance = new Utterance(item.en);
-        utterance.lang = 'en-US';
-        utterance.rate = 0.85;
-        const voices = synth.getVoices();
-        const bestVoice = voices.find(voice => voice.name.includes('Google US English')) ||
-          voices.find(voice => voice.name.includes('Samantha')) ||
-          voices.find(voice => voice.lang === 'en-US') ||
-          voices.find(voice => voice.lang.startsWith('en'));
-        if (bestVoice) utterance.voice = bestVoice;
-        utteranceRef.current = utterance;
-        utterance.onerror = event => {
-          if (utteranceRef.current === utterance && event.error !== 'canceled' && event.error !== 'interrupted') {
-            setAudioError(true);
-          }
-        };
-        Promise.resolve(synth.resume()).catch(() => {});
-        synth.speak(utterance);
-        setAudioError(false);
-      } catch (error) {
+  const speakText = useCallback(
+    (questionId, immediate = false) => {
+      const item = storyData?.[questionId];
+      if (!item) return;
+      stopSpeech();
+      const synth = window.speechSynthesis;
+      const Utterance = window.SpeechSynthesisUtterance;
+      if (!synth || !Utterance) {
         setAudioError(true);
-        console.warn('Speech synthesis unavailable:', error);
+        return;
       }
-    };
 
-    // Starting inside the gesture is important on Safari/iPad.
-    if (immediate) start();
-    else speechTimerRef.current = setTimeout(start, 200);
-  }, [storyData, stopSpeech]);
+      const start = () => {
+        try {
+          const utterance = new Utterance(item.en);
+          utterance.lang = "en-US";
+          utterance.rate = 0.85;
+          const voices = synth.getVoices();
+          const bestVoice =
+            voices.find((voice) => voice.name.includes("Google US English")) ||
+            voices.find((voice) => voice.name.includes("Samantha")) ||
+            voices.find((voice) => voice.lang === "en-US") ||
+            voices.find((voice) => voice.lang.startsWith("en"));
+          if (bestVoice) utterance.voice = bestVoice;
+          utteranceRef.current = utterance;
+          utterance.onerror = (event) => {
+            if (
+              utteranceRef.current === utterance &&
+              event.error !== "canceled" &&
+              event.error !== "interrupted"
+            ) {
+              setAudioError(true);
+            }
+          };
+          Promise.resolve(synth.resume()).catch(() => {});
+          synth.speak(utterance);
+          setAudioError(false);
+        } catch (error) {
+          setAudioError(true);
+          console.warn("Speech synthesis unavailable:", error);
+        }
+      };
+
+      // Starting inside the gesture is important on Safari/iPad.
+      if (immediate) start();
+      else speechTimerRef.current = setTimeout(start, 200);
+    },
+    [storyData, stopSpeech],
+  );
 
   useEffect(() => {
-    if (isStarted && !isCleared && questions[currentQueueIndex] !== undefined &&
-        lastSpokenIndexRef.current !== currentQueueIndex) {
+    if (
+      isStarted &&
+      !isCleared &&
+      questions[currentQueueIndex] !== undefined &&
+      lastSpokenIndexRef.current !== currentQueueIndex
+    ) {
       lastSpokenIndexRef.current = currentQueueIndex;
       speakText(questions[currentQueueIndex]);
     }
@@ -133,27 +168,29 @@ const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGa
     stopSpeech();
 
     if (id === questions[currentQueueIndex]) {
-      playSound('correct');
-      setFeedback({ status: 'correct', id });
+      playSound("correct");
+      setFeedback({ status: "correct", id });
       const elapsed = Math.max(0, (Date.now() - questionStartTime) / 1000);
       const points = Math.max(10, Math.floor(100 - elapsed * 15));
-      setScore(previous => previous + points);
-      timersRef.current.push(setTimeout(() => {
-        const nextIndex = currentQueueIndex + 1;
-        if (nextIndex < questions.length) {
-          lastSpokenIndexRef.current = null;
-          setCurrentQueueIndex(nextIndex);
-          generateChoices(questions[nextIndex]);
-        } else {
-          setIsCleared(true);
-          playSound('fanfare');
-          onGameClear(score + points);
-        }
-      }, 800));
+      setScore((previous) => previous + points);
+      timersRef.current.push(
+        setTimeout(() => {
+          const nextIndex = currentQueueIndex + 1;
+          if (nextIndex < questions.length) {
+            lastSpokenIndexRef.current = null;
+            setCurrentQueueIndex(nextIndex);
+            generateChoices(questions[nextIndex]);
+          } else {
+            setIsCleared(true);
+            playSound("fanfare");
+            onGameClear(score + points);
+          }
+        }, 800),
+      );
     } else {
-      playSound('wrong');
-      setFeedback({ status: 'wrong', id });
-      setScore(previous => Math.max(0, previous - 20));
+      playSound("wrong");
+      setFeedback({ status: "wrong", id });
+      setScore((previous) => Math.max(0, previous - 20));
       timersRef.current.push(setTimeout(() => setFeedback(null), 500));
     }
   };
@@ -162,17 +199,55 @@ const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGa
 
   if (!isStarted) {
     return (
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ backgroundColor: '#fff', padding: '50px', borderRadius: '30px', boxShadow: '0 15px 40px rgba(156, 39, 176, 0.2)', border: '5px solid #9C27B0', maxWidth: '600px' }}>
-          <div style={{ fontSize: '5rem', marginBottom: '20px' }}>🎧</div>
-          <h2 style={{ fontSize: '2rem', color: '#9C27B0', marginBottom: '20px' }}>Quick Listen Mode</h2>
-          <p style={{ fontSize: '1.2rem', color: '#666', lineHeight: '1.6', marginBottom: '30px', textAlign: 'left' }}>
-            流れる音声を聞いて、正しい画像を瞬時に選ぼう！<br/><br/>
-            ✅ 早く答えるほど高得点。<br/>
-            ✅ お手付き（ミス）は減点。<br/>
-            ✅ <b>もし音声が流れない場合は、「音声が聞こえない」ボタンを押してね。その問題は後でやり直せるよ。</b>（スキップしても得点は減らないよ）
+      <div
+        className="listening-intro"
+        style={{
+          flex: 1,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: "#fff",
+            padding: "50px",
+            borderRadius: "30px",
+            boxShadow: "0 15px 40px rgba(156, 39, 176, 0.2)",
+            border: "5px solid #9C27B0",
+            maxWidth: "600px",
+          }}
+        >
+          <div style={{ fontSize: "5rem", marginBottom: "20px" }}>🎧</div>
+          <h2
+            style={{ fontSize: "2rem", color: "#9C27B0", marginBottom: "20px" }}
+          >
+            Quick Listen Mode
+          </h2>
+          <p
+            style={{
+              fontSize: "1.2rem",
+              color: "#666",
+              lineHeight: "1.6",
+              marginBottom: "30px",
+              textAlign: "left",
+            }}
+          >
+            流れる音声を聞いて、正しい画像を瞬時に選ぼう！
+            <br />
+            <br />
+            ✅ 早く答えるほど高得点。
+            <br />
+            ✅ お手付き（ミス）は減点。
+            <br />✅{" "}
+            <b>
+              もし音声が流れない場合は、「音声が聞こえない」ボタンを押してね。その問題は後でやり直せるよ。
+            </b>
+            （スキップしても得点は減らないよ）
           </p>
-          <button onClick={handleStartGame} className="start-go-btn">START!</button>
+          <button onClick={handleStartGame} className="start-go-btn">
+            START!
+          </button>
         </div>
         <style>{`
           .start-go-btn {
@@ -188,51 +263,264 @@ const ListeningModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGa
 
   if (isCleared) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '10px 20px 30px', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: '100%', maxWidth: '800px', backgroundColor: '#fff', borderRadius: '15px', padding: '40px', border: '4px solid #9C27B0', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ marginBottom: '20px', padding: '10px 30px', backgroundColor: '#333', color: '#fff', borderRadius: '15px', fontSize: '1.5rem', fontWeight: 'bold' }}>
+      <div
+        className="quiz-result"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          padding: "10px 20px 30px",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "800px",
+            backgroundColor: "#fff",
+            borderRadius: "15px",
+            padding: "40px",
+            border: "4px solid #9C27B0",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              marginBottom: "20px",
+              padding: "10px 30px",
+              backgroundColor: "#333",
+              color: "#fff",
+              borderRadius: "15px",
+              fontSize: "1.5rem",
+              fontWeight: "bold",
+            }}
+          >
             {studentInfo.class} - {studentInfo.number}番 - {studentInfo.name}
           </div>
-          <h2 style={{ color: '#9C27B0', fontSize: '2.5rem', margin: '0 0 20px' }}>🎧 QUICK LISTEN CLEAR! 🎧</h2>
-          <div style={{ fontSize: '5rem', color: '#4caf50', fontWeight: '900' }}>{score} pts</div>
-          <button onClick={onRetry} style={{ marginTop: '30px', padding: '15px 40px', fontSize: '1.5rem', backgroundColor: '#9C27B0', color: '#fff', border: 'none', borderRadius: '40px', cursor: 'pointer' }}>🔄 Play Again</button>
+          <h2
+            style={{ color: "#9C27B0", fontSize: "2.5rem", margin: "0 0 20px" }}
+          >
+            🎧 QUICK LISTEN CLEAR! 🎧
+          </h2>
+          <div
+            style={{ fontSize: "5rem", color: "#4caf50", fontWeight: "900" }}
+          >
+            {score} pts
+          </div>
+          <button
+            onClick={onRetry}
+            style={{
+              marginTop: "30px",
+              padding: "15px 40px",
+              fontSize: "1.5rem",
+              backgroundColor: "#9C27B0",
+              color: "#fff",
+              border: "none",
+              borderRadius: "40px",
+              cursor: "pointer",
+            }}
+          >
+            🔄 Play Again
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '10px 20px 30px', alignItems: 'center', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '900px', marginBottom: '10px' }}>
+    <div
+      className="quiz-board"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        padding: "10px 20px 30px",
+        alignItems: "center",
+        boxSizing: "border-box",
+      }}
+    >
+      <div
+        className="quiz-meta"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          width: "100%",
+          maxWidth: "900px",
+          marginBottom: "10px",
+        }}
+      >
         {/* スキップ分も含むため currentIndex ではなく QueueIndex を利用 */}
-        <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Progress: {currentQueueIndex + 1} / {questions.length}</div>
-        <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#9C27B0' }}>SCORE: {score}</div>
+        <div style={{ fontSize: "1.5rem", fontWeight: "bold" }}>
+          Progress: {currentQueueIndex + 1} / {questions.length}
+        </div>
+        <div
+          style={{ fontSize: "1.8rem", fontWeight: "900", color: "#9C27B0" }}
+        >
+          SCORE: {score}
+        </div>
       </div>
-      
-      <div style={{ width: '100%', maxWidth: '900px', flex: 1, backgroundColor: '#f3e5f5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '20px', borderRadius: '20px', border: '3px solid #ce93d8', boxSizing: 'border-box', position: 'relative' }}>
-        <p style={{ color: '#8e24aa', fontWeight: 'bold', margin: '0 0 10px', fontSize: '1.5rem' }}>⚡ 早押しリスニング ⚡</p>
-        {audioError && <p role="alert" style={{ color: '#b71c1c', fontWeight: 'bold', textAlign: 'center' }}>音声を再生できません。もう一度聞くか、スキップして再挑戦してください。</p>}
+
+      <div
+        className="quiz-prompt"
+        style={{
+          width: "100%",
+          maxWidth: "900px",
+          flex: 1,
+          backgroundColor: "#f3e5f5",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "20px",
+          borderRadius: "20px",
+          border: "3px solid #ce93d8",
+          boxSizing: "border-box",
+          position: "relative",
+        }}
+      >
+        <p
+          style={{
+            color: "#8e24aa",
+            fontWeight: "bold",
+            margin: "0 0 10px",
+            fontSize: "1.5rem",
+          }}
+        >
+          ⚡ 早押しリスニング ⚡
+        </p>
+        {audioError && (
+          <p
+            role="alert"
+            style={{
+              color: "#b71c1c",
+              fontWeight: "bold",
+              textAlign: "center",
+            }}
+          >
+            音声を再生できません。もう一度聞くか、スキップして再挑戦してください。
+          </p>
+        )}
         <div className="sound-wave">
-          <div className="wave-bar"></div><div className="wave-bar"></div><div className="wave-bar"></div><div className="wave-bar"></div><div className="wave-bar"></div>
+          <div className="wave-bar"></div>
+          <div className="wave-bar"></div>
+          <div className="wave-bar"></div>
+          <div className="wave-bar"></div>
+          <div className="wave-bar"></div>
         </div>
-        
-        <div style={{ display: 'flex', gap: '15px', position: 'absolute', bottom: '15px', right: '20px' }}>
+
+        <div
+          className="listening-audio-actions"
+          style={{
+            display: "flex",
+            gap: "15px",
+            position: "absolute",
+            bottom: "15px",
+            right: "20px",
+          }}
+        >
           {/* 🌟 音声が聞こえないボタン */}
-          <button onClick={handleSkip} className="skip-btn">⚠️ 音声が聞こえない</button>
-          <button onClick={() => speakText(questions[currentQueueIndex], true)} className="repeat-btn">🔁 もう一度聞く</button>
+          <button onClick={handleSkip} className="skip-btn">
+            ⚠️ 音声が聞こえない
+          </button>
+          <button
+            onClick={() => speakText(questions[currentQueueIndex], true)}
+            className="repeat-btn"
+          >
+            🔁 もう一度聞く
+          </button>
         </div>
       </div>
-      
-      <div style={{ display: 'flex', gap: '30px', width: '100%', maxWidth: '1000px', justifyContent: 'center', flex: 1.2, marginTop: '20px' }}>
-        {choices.map(id => {
-          const isCorrect = feedback?.status === 'correct' && feedback.id === id;
-          const isWrong = feedback?.status === 'wrong' && feedback.id === id;
+
+      <div
+        className="quiz-choices"
+        style={{
+          display: "flex",
+          gap: "30px",
+          width: "100%",
+          maxWidth: "1000px",
+          justifyContent: "center",
+          flex: 1.2,
+          marginTop: "20px",
+        }}
+      >
+        {choices.map((id) => {
+          const isCorrect =
+            feedback?.status === "correct" && feedback.id === id;
+          const isWrong = feedback?.status === "wrong" && feedback.id === id;
           return (
-            <div key={id} onClick={() => handleChoiceClick(id)} style={{ flex: 1, cursor: 'pointer', borderRadius: '15px', overflow: 'hidden', border: isCorrect ? '6px solid #4caf50' : (isWrong ? '6px solid #f44336' : '6px solid transparent'), position: 'relative', aspectRatio: '4/3', backgroundColor: '#fff', boxShadow: '0 6px 15px rgba(0,0,0,0.1)', transition: 'transform 0.1s' }}>
-              <img src={`${process.env.PUBLIC_URL}/images/unit${unit}/${id + 1}.webp`} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', backgroundColor: '#fff' }} alt="choice" />
-              {isCorrect && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(76, 175, 80, 0.3)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><span style={{fontSize: '5rem'}}>⭕</span></div>}
-              {isWrong && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(244, 67, 54, 0.3)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><span style={{fontSize: '5rem'}}>❌</span></div>}
-            </div>
+            <button
+              className="quiz-choice"
+              type="button"
+              aria-label={"選択画像 " + (id + 1)}
+              key={id}
+              onClick={() => handleChoiceClick(id)}
+              style={{
+                flex: 1,
+                cursor: "pointer",
+                borderRadius: "15px",
+                overflow: "hidden",
+                border: isCorrect
+                  ? "6px solid #4caf50"
+                  : isWrong
+                    ? "6px solid #f44336"
+                    : "6px solid transparent",
+                position: "relative",
+                aspectRatio: "4/3",
+                backgroundColor: "#fff",
+                boxShadow: "0 6px 15px rgba(0,0,0,0.1)",
+                transition: "transform 0.1s",
+              }}
+            >
+              <img
+                src={`${process.env.PUBLIC_URL}/images/unit${unit}/${id + 1}.webp`}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  display: "block",
+                  backgroundColor: "#fff",
+                }}
+                alt="choice"
+              />
+              {isCorrect && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    backgroundColor: "rgba(76, 175, 80, 0.3)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ fontSize: "5rem" }}>⭕</span>
+                </div>
+              )}
+              {isWrong && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    backgroundColor: "rgba(244, 67, 54, 0.3)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ fontSize: "5rem" }}>❌</span>
+                </div>
+              )}
+            </button>
           );
         })}
       </div>

@@ -940,3 +940,339 @@ button {
     width: 100%;
   }
 }
+/* Mission workspace: size all rows from the actual visual viewport. */
+.app-shell.mission-active {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.mission-active .game-toolbar {
+  height: 42px;
+  min-height: 42px;
+  padding: 5px 2vw;
+  font-size: 12px;
+}
+.mission-active .game-toolbar .subtle {
+  padding: 6px 11px;
+}
+.mission-active .game-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.mission-active .reading-studio {
+  min-height: 0;
+  padding: 4px 2vw 10px;
+  gap: 10px;
+}
+.mission-active .reading-main {
+  min-height: 0;
+}
+.mission-active .reading-evaluation {
+  position: relative;
+  min-height: 100px;
+  max-height: 125px;
+}
+.mission-active .transcript {
+  padding-right: 150px;
+}
+.reconnect-mic {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  font-size: 11px;
+}
+.mission-active .reading-controls .primary {
+  padding: 12px 24px;
+}
+.mission-active .quiz-board {
+  display: grid !important;
+  grid-template-rows: 32px minmax(0, 1fr) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: 5px 2vw 12px !important;
+  gap: 12px;
+}
+.mission-active .quiz-meta {
+  margin: 0 auto !important;
+  height: 32px;
+  align-items: center;
+}
+.mission-active .quiz-meta > div {
+  font-size: 20px !important;
+}
+.mission-active .quiz-prompt {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: 1200px !important;
+  margin: 0 auto;
+  padding: 14px 25px !important;
+  overflow: hidden;
+}
+.mission-active
+  .quiz-prompt
+  > div:not(.listening-audio-actions):not(.sound-wave) {
+  font-size: clamp(19px, 2.7vw, 32px) !important;
+  line-height: 1.4;
+}
+.mission-active .quiz-choices {
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto !important;
+  gap: 16px !important;
+  align-items: stretch;
+  max-width: 1200px !important;
+}
+.mission-active .quiz-choice {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  width: 0;
+  height: 100%;
+  aspect-ratio: auto !important;
+  padding: 0;
+  background: #fff;
+  border-radius: 16px;
+}
+.mission-active .quiz-choice img {
+  max-height: 100%;
+  min-height: 0;
+  object-fit: contain;
+}
+.mission-active .listening-audio-actions {
+  position: static !important;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  gap: 10px !important;
+}
+.mission-active .listening-intro {
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px;
+}
+.mission-active .listening-intro > div {
+  padding: 18px 30px !important;
+  max-width: 750px !important;
+}
+.mission-active .listening-intro h2 {
+  font-size: 26px !important;
+  margin: 6px 0 14px !important;
+}
+.mission-active .listening-intro > div > div {
+  font-size: 40px !important;
+  margin-bottom: 10px !important;
+}
+.mission-active .listening-intro p {
+  font-size: 16px !important;
+  margin-bottom: 20px !important;
+  line-height: 1.55 !important;
+}
+.mission-active .puzzle-board {
+  padding: 0 1.5vw 10px;
+  gap: 5px;
+  min-height: 0;
+}
+.mission-active .puzzle-meta {
+  height: 30px;
+  min-height: 30px;
+  font-size: 11px;
+}
+.mission-active .puzzle-meta strong {
+  font-size: 20px;
+}
+.mission-active .puzzle-columns {
+  min-height: 0;
+  gap: 10px;
+}
+.mission-active .puzzle-slots {
+  flex: 3.5;
+  min-height: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  padding: 0;
+  align-content: stretch;
+  overflow: hidden;
+}
+.mission-active .puzzle-slot {
+  min-height: 0;
+  padding: 6px;
+  gap: 4px;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 16px 42px;
+}
+.mission-active .puzzle-passage {
+  height: 100%;
+  min-height: 0;
+  line-height: 1.25;
+  margin: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.mission-active .slot-translation {
+  min-height: 0;
+  height: 16px;
+  margin: 0;
+  line-height: 1;
+}
+.mission-active .slot-translation button {
+  padding: 1px 4px;
+  font-size: 9px;
+  line-height: 14px;
+}
+.mission-active .drop-target {
+  aspect-ratio: auto;
+  height: 42px;
+  min-height: 0;
+  width: 100%;
+  border-width: 1px;
+}
+.mission-active .drop-target span {
+  font-size: 12px;
+}
+.mission-active .puzzle-deck {
+  flex: 1.35;
+  min-height: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  align-content: stretch;
+  overflow: hidden;
+}
+.mission-active .puzzle-image {
+  min-height: 0;
+  height: 100%;
+  aspect-ratio: auto;
+}
+.mission-active .puzzle-result {
+  grid-row: 1/-1;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 5px;
+}
+.puzzle-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #1c335975;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.puzzle-detail {
+  width: min(650px, 95vw);
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 20px 50px #17355050;
+  font-size: 20px;
+  line-height: 1.6;
+  max-height: 90dvh;
+  overflow: auto;
+}
+.puzzle-detail > .subtle {
+  float: right;
+}
+@media (max-width: 900px) and (min-height: 750px) {
+  .mission-active .puzzle-columns {
+    flex-direction: column;
+  }
+  .mission-active .puzzle-slots {
+    flex: 1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+  }
+  .mission-active .puzzle-deck {
+    flex: 0 0 150px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+  .mission-active .puzzle-slot {
+    grid-template-rows: minmax(0, 1fr) 16px 36px;
+  }
+  .mission-active .drop-target {
+    height: 36px;
+  }
+  .mission-active .puzzle-result {
+    grid-column: 1/-1;
+    grid-row: 1/-1;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 700px) {
+  .mission-active .reading-main {
+    flex-direction: row;
+    flex: 1;
+  }
+  .mission-active .reading-image,
+  .mission-active .reading-main.dense .reading-image {
+    width: 33%;
+    height: auto;
+    padding: 8px;
+  }
+  .mission-active .reading-text {
+    padding: 12px;
+  }
+  .mission-active .reading-english {
+    font-size: 18px;
+    margin: 12px 0;
+  }
+  .mission-active .reading-japanese {
+    font-size: 12px;
+  }
+  .mission-active .game-toolbar > span {
+    display: none;
+  }
+  .mission-active .quiz-choices {
+    gap: 8px !important;
+  }
+  .mission-active .quiz-prompt {
+    padding: 12px !important;
+  }
+  .mission-active .quiz-meta > div {
+    font-size: 16px !important;
+  }
+  .mission-active .transcript {
+    padding-right: 15px;
+    padding-bottom: 40px;
+  }
+}
+.mission-active .quiz-board.is-result {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+}
+.mission-active .quiz-board.is-result > div,
+.mission-active .quiz-result > div {
+  min-height: 0;
+  max-height: 100%;
+  padding: 20px !important;
+  overflow: hidden;
+}
+.mission-active .quiz-result {
+  min-height: 0;
+  padding: 10px 2vw !important;
+}
+.mission-active .quiz-result h2 {
+  font-size: 28px !important;
+  margin-bottom: 10px !important;
+}
+.mission-active .quiz-result button {
+  margin-top: 15px !important;
+  padding: 12px 25px !important;
+}
+@media (max-height: 650px) {
+  .mission-active
+    .quiz-prompt
+    > div:not(.listening-audio-actions):not(.sound-wave) {
+    font-size: 24px !important;
+    line-height: 1.35;
+  }
+}

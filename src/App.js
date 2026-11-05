@@ -220,35 +220,42 @@ function App() {
     );
   };
   return (
-    <main className="app-shell">
-      <header className="app-header">
-        <div>
-          <span className="eyebrow">TREASURE HUNT</span>
-          <h1>
-            Story Match <span>Learning Progress</span>
-          </h1>
-        </div>
-        <div className="student-profile">
-          <strong>{student.name}</strong>
-          <span>
-            {student.class} · {student.number}番
-          </span>
-        </div>
-        <button
-          className="subtle"
-          onClick={() => {
-            const pw = window.prompt(
-              "先生のパスワードを入力してください（情報の書き換え）:",
-            );
-            if (pw === "3939") {
-              setDraft(student);
-              setRegistered(false);
-            }
-          }}
-        >
-          情報を変更する
-        </button>
-      </header>
+    <main
+      className={
+        "app-shell " +
+        (view === "game" || view === "settings" ? "mission-active" : "")
+      }
+    >
+      {view !== "game" && view !== "settings" && (
+        <header className="app-header">
+          <div>
+            <span className="eyebrow">TREASURE HUNT</span>
+            <h1>
+              Story Match <span>Learning Progress</span>
+            </h1>
+          </div>
+          <div className="student-profile">
+            <strong>{student.name}</strong>
+            <span>
+              {student.class} · {student.number}番
+            </span>
+          </div>
+          <button
+            className="subtle"
+            onClick={() => {
+              const pw = window.prompt(
+                "先生のパスワードを入力してください（情報の書き換え）:",
+              );
+              if (pw === "3939") {
+                setDraft(student);
+                setRegistered(false);
+              }
+            }}
+          >
+            情報を変更する
+          </button>
+        </header>
+      )}
       {storageError && (
         <div role="alert" className="storage-error">
           端末に保存できません。画面を閉じる前にスクリーンショットを保存してください。
