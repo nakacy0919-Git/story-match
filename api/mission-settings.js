@@ -7,19 +7,29 @@ const filename = () =>
 const attempts = new Map();
 function authorized(req, password) {
   const configured = process.env.STORY_MATCH_ADMIN_PASSWORD;
-  if (!configured) return false;
+  if (!configured)
+    return {
+      status: 503,
+      error: "管理者認証を準備できません。時間をおいて再試行してください。",
+    };
   const ip = String(req.headers["x-forwarded-for"] || "unknown").split(",")[0];
   const old = attempts.get(ip) || { n: 0, until: Date.now() + 60000 };
   if (Date.now() > old.until) {
     old.n = 0;
     old.until = Date.now() + 60000;
   }
-  if (old.n >= 15) return false;
+  if (old.n >= 15)
+    return {
+      status: 429,
+      retryAfter: Math.max(1, Math.ceil((old.until - Date.now()) / 1000)),
+      error:
+        "ログイン試行が多すぎます。1分ほど待ってからもう一度お試しください。",
+    };
   const ok =
     typeof password === "string" &&
     timingSafeEqual(
-      createHash("sha256").update(password).digest(),
-      createHash("sha256").update(configured).digest(),
+      createHash("sha256").update(password.normalize("NFKC").trim()).digest(),
+      createHash("sha256").update(configured.normalize("NFKC").trim()).digest(),
     );
   if (ok) attempts.delete(ip);
   else {
@@ -27,7 +37,12 @@ function authorized(req, password) {
     if (attempts.size > 1000) attempts.clear();
     attempts.set(ip, old);
   }
-  return ok;
+  return ok
+    ? { status: 200 }
+    : {
+        status: 401,
+        error: "パスワードが違います。数字5桁を確認してください。",
+      };
 }
 function createHandler({ blob = () => import("@vercel/blob") } = {}) {
   return async function handler(req, res) {
@@ -61,10 +76,12 @@ function createHandler({ blob = () => import("@vercel/blob") } = {}) {
           return res.status(400).json({ error: "入力形式が不正です。" });
         }
       }
-      if (!authorized(req, body?.password))
-        return res
-          .status(401)
-          .json({ error: "パスワードが違うか、試行回数の上限に達しました。" });
+      const auth = authorized(req, body?.password);
+      if (auth.status !== 200) {
+        if (auth.retryAfter)
+          res.setHeader("Retry-After", String(auth.retryAfter));
+        return res.status(auth.status).json({ error: auth.error });
+      }
       if (body.action === "verify") return res.status(200).json({ ok: true });
       if (body.action !== "save")
         return res.status(400).json({ error: "操作が不正です。" });
