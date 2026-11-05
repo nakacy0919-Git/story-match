@@ -89,7 +89,7 @@ function Scene({
       <div
         className={
           "reading-main " +
-          (item.en.length + item.ja.length * 0.5 > 190 ? "dense" : "")
+          (item.en.length + item.ja.length * 0.5 > 130 ? "dense" : "")
         }
       >
         <div className="reading-image">
