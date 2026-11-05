@@ -289,6 +289,9 @@ const StoryModeBoard = ({
   const finishRequestedRef =
     useRef(false);
 
+  const recognitionRestartTimerRef = useRef(null);
+  const finalizeTimerRef = useRef(null);
+
 
   // ==========================================================
   // 音声停止
@@ -321,26 +324,19 @@ const StoryModeBoard = ({
   // ==========================================================
 
   const stopRecognition = () => {
-
-    recordingActiveRef.current =
-      false;
-
-    if (
-      recognitionRef.current
-    ) {
-
-      try {
-
-        recognitionRef.current.abort();
-
-      } catch (error) {
-        // ignore
-      }
-
-      recognitionRef.current =
-        null;
+    recordingActiveRef.current = false;
+    clearTimeout(recognitionRestartTimerRef.current);
+    clearTimeout(finalizeTimerRef.current);
+    recognitionRestartTimerRef.current = null;
+    finalizeTimerRef.current = null;
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (recognition) {
+      recognition.onend = null;
+      recognition.onresult = null;
+      recognition.onerror = null;
+      try { recognition.abort(); } catch (error) { /* already stopped */ }
     }
-
     setIsRecording(false);
   };
 
@@ -555,9 +551,9 @@ const StoryModeBoard = ({
     }
 
 
-    finishRequestedRef.current =
-      false;
-
+    finishRequestedRef.current = false;
+    clearTimeout(finalizeTimerRef.current);
+    finalizeTimerRef.current = null;
 
     const spoken =
       liveTranscriptRef.current
@@ -776,41 +772,19 @@ const StoryModeBoard = ({
     // 認識が勝手に止まった場合
     // ======================================================
 
-    recognition.onend =
-      () => {
-
-        // 生徒がまだ音読中
-        if (
-          recordingActiveRef.current
-        ) {
-
-          setTimeout(
-            () => {
-
-              if (
-                !recordingActiveRef.current
-              ) {
-                return;
-              }
-
-              try {
-
-                recognition.start();
-
-              } catch (error) {
-
-                // すでに開始されている場合は無視
-              }
-
-            },
-            250
-          );
-
-        } else {
-
-          finalizeAccuracy();
-        }
-      };
+    recognition.onend = () => {
+      if (recognitionRef.current !== recognition) return;
+      if (recordingActiveRef.current) {
+        clearTimeout(recognitionRestartTimerRef.current);
+        recognitionRestartTimerRef.current = setTimeout(() => {
+          if (recognitionRef.current !== recognition || !recordingActiveRef.current) return;
+          try { recognition.start(); } catch (error) { /* already active */ }
+        }, 250);
+      } else {
+        recognitionRef.current = null;
+        finalizeAccuracy();
+      }
+    };
 
 
     // ======================================================
@@ -874,14 +848,10 @@ const StoryModeBoard = ({
 
 
     // onendが呼ばれない場合の保険
-    setTimeout(
-      () => {
-
-        finalizeAccuracy();
-
-      },
-      700
-    );
+    clearTimeout(finalizeTimerRef.current);
+    finalizeTimerRef.current = setTimeout(() => {
+      finalizeAccuracy();
+    }, 700);
   };
 
 
