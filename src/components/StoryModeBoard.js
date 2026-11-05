@@ -288,10 +288,6 @@ const StoryModeBoard = ({
   const finishRequestedRef =
     useRef(false);
 
-  const recognitionRestartTimerRef = useRef(null);
-  const finalizeTimerRef = useRef(null);
-  const fallbackUtteranceRef = useRef(null);
-
 
   // ==========================================================
   // 音声停止
@@ -313,9 +309,8 @@ const StoryModeBoard = ({
       'speechSynthesis' in window
     ) {
 
-      try { window.speechSynthesis.cancel(); } catch (error) { /* unavailable */ }
+      window.speechSynthesis.cancel();
     }
-    fallbackUtteranceRef.current = null;
   };
 
 
@@ -324,27 +319,496 @@ const StoryModeBoard = ({
   // ==========================================================
 
   const stopRecognition = () => {
-    recordingActiveRef.current = false;
-    clearTimeout(recognitionRestartTimerRef.current);
-    clearTimeout(finalizeTimerRef.current);
-    recognitionRestartTimerRef.current = null;
-    finalizeTimerRef.current = null;
-    const recognition = recognitionRef.current;
-    recognitionRef.current = null;
-    if (recognition) {
-      recognition.onend = () => {
-      if (recognitionRef.current !== recognition) return;
-      if (recordingActiveRef.current) {
-        clearTimeout(recognitionRestartTimerRef.current);
-        recognitionRestartTimerRef.current = setTimeout(() => {
-          if (recognitionRef.current !== recognition || !recordingActiveRef.current) return;
-          try { recognition.start(); } catch (error) { /* already active */ }
-        }, 250);
-      } else {
-        recognitionRef.current = null;
-        finalizeAccuracy();
+
+    recordingActiveRef.current =
+      false;
+
+    if (
+      recognitionRef.current
+    ) {
+
+      try {
+
+        recognitionRef.current.abort();
+
+      } catch (error) {
+        // ignore
       }
+
+      recognitionRef.current =
+        null;
+    }
+
+    setIsRecording(false);
+  };
+
+
+  // ==========================================================
+  // Scene番号をApp.jsへ通知
+  // ==========================================================
+
+  useEffect(() => {
+
+    if (onSceneChange) {
+
+      onSceneChange(
+        currentIndex
+      );
+    }
+
+  }, [
+    currentIndex,
+    onSceneChange
+  ]);
+
+
+  // ==========================================================
+  // Scene / Unit変更時
+  // ==========================================================
+
+  useEffect(() => {
+
+    stopAudio();
+
+    stopRecognition();
+
+    setReadingOpen(false);
+
+    setTranscript('');
+
+    setAccuracy(null);
+
+    finalTranscriptRef.current =
+      '';
+
+    liveTranscriptRef.current =
+      '';
+
+    finishRequestedRef.current =
+      false;
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  }, [
+    currentIndex,
+    unit
+  ]);
+
+
+  // ==========================================================
+  // Componentを離れたとき
+  // ==========================================================
+
+  useEffect(() => {
+
+    return () => {
+
+      stopAudio();
+
+      stopRecognition();
+
     };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  }, []);
+
+
+  // ==========================================================
+  // MP3を再生
+  //
+  // public/audio/unit7/1.mp3
+  // public/audio/unit7/2.mp3
+  // ...
+  // ==========================================================
+
+  const playAudio = () => {
+
+    stopAudio();
+
+
+    const audioUrl =
+      `${process.env.PUBLIC_URL}/audio/unit${unit}/${currentIndex + 1}.mp3`;
+
+
+    const audio =
+      new Audio(audioUrl);
+
+
+    audioRef.current =
+      audio;
+
+
+    audio.onerror = () => {
+
+      console.warn(
+        'Audio file not found:',
+        audioUrl
+      );
+    };
+
+
+    audio.play().catch(
+      (error) => {
+
+        console.warn(
+          'Audio playback failed:',
+          error
+        );
+      }
+    );
+  };
+
+
+  // ==========================================================
+  // 前へ
+  // ==========================================================
+
+  const handlePrev = () => {
+
+    if (
+      currentIndex > 0
+    ) {
+
+      setCurrentIndex(
+        prev => prev - 1
+      );
+    }
+  };
+
+
+  // ==========================================================
+  // 次へ
+  // ==========================================================
+
+  const handleNext = () => {
+
+    if (
+      currentIndex <
+      storyData.length - 1
+    ) {
+
+      setCurrentIndex(
+        prev => prev + 1
+      );
+    }
+  };
+
+
+  // ==========================================================
+  // 音読練習を開く
+  // ==========================================================
+
+  const openReadingPractice = () => {
+
+    stopAudio();
+
+    stopRecognition();
+
+
+    setTranscript('');
+
+    setAccuracy(null);
+
+
+    finalTranscriptRef.current =
+      '';
+
+    liveTranscriptRef.current =
+      '';
+
+    finishRequestedRef.current =
+      false;
+
+
+    setReadingOpen(true);
+  };
+
+
+  // ==========================================================
+  // 音読練習を閉じる
+  // ==========================================================
+
+  const closeReadingPractice = () => {
+
+    finishRequestedRef.current =
+      false;
+
+    stopRecognition();
+
+    setReadingOpen(false);
+  };
+
+
+  // ==========================================================
+  // Accuracy確定
+  // ==========================================================
+
+  const finalizeAccuracy = () => {
+
+    if (
+      !finishRequestedRef.current
+    ) {
+      return;
+    }
+
+
+    finishRequestedRef.current =
+      false;
+
+
+    const spoken =
+      liveTranscriptRef.current
+        .replace(/\s+/g, ' ')
+        .trim();
+
+
+    setTranscript(spoken);
+
+
+    const score =
+      calculateAccuracy(
+        storyData[currentIndex].en,
+        spoken
+      );
+
+
+    setAccuracy(score);
+
+
+    if (
+      score >= 80
+    ) {
+
+      playSuccessSound();
+    }
+  };
+
+
+  // ==========================================================
+  // 音読スタート
+  // ==========================================================
+
+  const startReading = () => {
+
+    stopAudio();
+
+    stopRecognition();
+
+
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
+
+
+    if (!SpeechRecognition) {
+
+      alert(
+        'このブラウザでは音声認識機能を利用できません。\n\nGoogle Chrome または Microsoft Edge を使用してください。'
+      );
+
+      return;
+    }
+
+
+    setTranscript('');
+
+    setAccuracy(null);
+
+
+    finalTranscriptRef.current =
+      '';
+
+    liveTranscriptRef.current =
+      '';
+
+    finishRequestedRef.current =
+      false;
+
+    recordingActiveRef.current =
+      true;
+
+
+    setIsRecording(true);
+
+
+    const recognition =
+      new SpeechRecognition();
+
+
+    recognitionRef.current =
+      recognition;
+
+
+    recognition.lang =
+      'en-US';
+
+
+    // ======================================================
+    // 少し止まっても認識を継続
+    // ======================================================
+
+    recognition.continuous =
+      true;
+
+
+    // ======================================================
+    // 読んでいる途中も文字起こし
+    // ======================================================
+
+    recognition.interimResults =
+      true;
+
+
+    recognition.maxAlternatives =
+      1;
+
+
+    // ======================================================
+    // 結果
+    // ======================================================
+
+    recognition.onresult =
+      (event) => {
+
+        let interim =
+          '';
+
+
+        for (
+          let i =
+            event.resultIndex;
+
+          i <
+          event.results.length;
+
+          i++
+        ) {
+
+          const result =
+            event.results[i];
+
+          const text =
+            result[0].transcript;
+
+
+          if (
+            result.isFinal
+          ) {
+
+            finalTranscriptRef.current +=
+              ' ' + text;
+
+          } else {
+
+            interim +=
+              ' ' + text;
+          }
+        }
+
+
+        const combined =
+          (
+            finalTranscriptRef.current +
+            ' ' +
+            interim
+          )
+            .replace(/\s+/g, ' ')
+            .trim();
+
+
+        liveTranscriptRef.current =
+          combined;
+
+
+        setTranscript(
+          combined
+        );
+      };
+
+
+    // ======================================================
+    // エラー
+    // ======================================================
+
+    recognition.onerror =
+      (event) => {
+
+        // 無音・手動停止は問題なし
+        if (
+          event.error ===
+            'no-speech' ||
+          event.error ===
+            'aborted'
+        ) {
+
+          return;
+        }
+
+
+        console.warn(
+          'Speech Recognition:',
+          event.error
+        );
+
+
+        if (
+          event.error ===
+          'not-allowed'
+        ) {
+
+          recordingActiveRef.current =
+            false;
+
+          setIsRecording(false);
+
+
+          alert(
+            'マイクの使用が許可されていません。\nブラウザのマイク権限を確認してください。'
+          );
+        }
+      };
+
+
+    // ======================================================
+    // 認識が勝手に止まった場合
+    // ======================================================
+
+    recognition.onend =
+      () => {
+
+        // 生徒がまだ音読中
+        if (
+          recordingActiveRef.current
+        ) {
+
+          setTimeout(
+            () => {
+
+              if (
+                !recordingActiveRef.current
+              ) {
+                return;
+              }
+
+              try {
+
+                recognition.start();
+
+              } catch (error) {
+
+                // すでに開始されている場合は無視
+              }
+
+            },
+            250
+          );
+
+        } else {
+
+          finalizeAccuracy();
+        }
+      };
 
 
     // ======================================================
@@ -408,10 +872,14 @@ const StoryModeBoard = ({
 
 
     // onendが呼ばれない場合の保険
-    clearTimeout(finalizeTimerRef.current);
-    finalizeTimerRef.current = setTimeout(() => {
-      finalizeAccuracy();
-    }, 700);
+    setTimeout(
+      () => {
+
+        finalizeAccuracy();
+
+      },
+      700
+    );
   };
 
 
