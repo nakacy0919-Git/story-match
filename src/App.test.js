@@ -260,3 +260,21 @@ test("a failed attempt does not show confetti", () => {
     screen.getByRole("button", { name: "スキップ（未クリア）" }),
   ).toBeEnabled();
 });
+
+test("a cached administrator threshold applies to reading gates and confetti", () => {
+  localStorage.setItem(
+    "storyMatchMissionRulesCache",
+    JSON.stringify({
+      readingAccuracy: 60,
+      puzzleSeconds: 0,
+      randomPoints: 0,
+      listeningPoints: 0,
+    }),
+  );
+  render(<App />);
+  reading();
+  expect(screen.getByText("Accuracy 60%以上で合格")).toBeInTheDocument();
+  say("Colin wanted to get easy money");
+  expect(screen.getByRole("button", { name: "次のシーンへ ▶" })).toBeEnabled();
+  expect(screen.getByTestId("reading-confetti")).toBeInTheDocument();
+});

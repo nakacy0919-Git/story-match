@@ -10,6 +10,7 @@ const ListeningModeBoard = ({
   qCount,
   onGameClear,
   studentInfo,
+  minPoints = 0,
 }) => {
   const [isStarted, setIsStarted] = useState(false);
   const [questions, setQuestions] = useState([]); // 🌟 出題予定のキュー
@@ -304,13 +305,16 @@ const ListeningModeBoard = ({
           <h2
             style={{ color: "#9C27B0", fontSize: "2.5rem", margin: "0 0 20px" }}
           >
-            🎧 QUICK LISTEN CLEAR! 🎧
+            {score >= minPoints
+              ? "🎧 QUICK LISTEN CLEAR! 🎧"
+              : "もう一度挑戦！"}
           </h2>
           <div
             style={{ fontSize: "5rem", color: "#4caf50", fontWeight: "900" }}
           >
             {score} pts
           </div>
+          <p>合格基準：{minPoints}点以上（全問コース）</p>
           <button
             onClick={onRetry}
             style={{

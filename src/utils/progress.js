@@ -1,4 +1,5 @@
 import { readStoredJSON, writeStoredJSON } from "./storage";
+import { DEFAULT_RULES } from "./missionRules";
 export const profileKey = (s) =>
   JSON.stringify([s.class.trim(), String(s.number).trim(), s.name.trim()]);
 export const progressKey = (s) => "storyMatchProgress:v1:" + profileKey(s);
@@ -39,12 +40,18 @@ export function sceneScores(record, total) {
     return Number.isFinite(n) && n >= 0 && n <= 100 ? n : 0;
   });
 }
-export function completedModes(record, total) {
+export function completedModes(record, total, rules = DEFAULT_RULES) {
   return [
-    sceneScores(record, total).every((n) => n >= 80),
-    Object.values(record?.puzzle || {}).some((x) => Number.isFinite(x?.best)),
-    !!record?.random?.fullClear,
-    !!record?.listening?.fullClear,
+    sceneScores(record, total).every((n) => n >= rules.readingAccuracy),
+    Object.values(record?.puzzle || {}).some(
+      (x) =>
+        Number.isFinite(x?.best) &&
+        (!rules.puzzleSeconds || x.best <= rules.puzzleSeconds),
+    ),
+    !!record?.random?.fullClear &&
+      (record.random.bestByCount?.[total] ?? 0) >= rules.randomPoints,
+    !!record?.listening?.fullClear &&
+      (record.listening.bestByCount?.[total] ?? 0) >= rules.listeningPoints,
   ];
 }
 export function recordResult(previous, unit, mode, result, options = {}) {

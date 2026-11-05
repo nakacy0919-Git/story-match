@@ -1311,3 +1311,45 @@ button {
     display: none;
   }
 }
+.admin-page {
+  min-height: 100dvh;
+  background: #edf2fa;
+  padding: 25px;
+  display: flex;
+  justify-content: center;
+}
+.admin-panel {
+  background: white;
+  padding: 30px;
+  border-radius: 22px;
+  width: min(720px, 100%);
+  box-shadow: 0 10px 35px #263e6615;
+}
+.admin-panel h1 {
+  font-size: 25px;
+}
+.admin-panel p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #61758f;
+}
+.admin-panel label {
+  display: block;
+  font-weight: 650;
+  font-size: 14px;
+  margin: 20px 0;
+}
+.admin-panel input {
+  display: block;
+  padding: 12px;
+  border: 1px solid #cdd9e9;
+  border-radius: 9px;
+  margin-top: 8px;
+  width: 100%;
+  font-size: 20px;
+}
+.admin-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
