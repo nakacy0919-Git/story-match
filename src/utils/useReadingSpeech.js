@@ -58,6 +58,7 @@ export function useReadingSpeech(sentence, onScore, calculate) {
       interim: "",
       stopping: false,
       recoveries: 0,
+      startRecoveries: 0,
     };
     session.current = s;
     setTranscript("");
@@ -186,10 +187,22 @@ export function useReadingSpeech(sentence, onScore, calculate) {
       };
       try {
         r.start();
-      } catch (_) {
-        dispose();
-        setPhase("idle");
-        setStatus("音声認識を開始できませんでした。もう一度お試しください。");
+      } catch (error) {
+        if (error.name === "InvalidStateError" && s.startRecoveries++ < 1) {
+          clearTimeout(s.health);
+          r.onstart = r.onresult = r.onend = r.onerror = null;
+          s.rec = null;
+          recognizerRef.current = null;
+          try {
+            r.abort();
+          } catch (_) {}
+          setStatus("前のマイク接続を終了しています。自動で再接続します。");
+          s.restart = setTimeout(listen, 500);
+        } else {
+          dispose();
+          setPhase("idle");
+          setStatus("音声認識を開始できませんでした。もう一度お試しください。");
+        }
       }
     };
     const delay = Math.max(0, readyAt.current - Date.now());

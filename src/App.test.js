@@ -182,3 +182,25 @@ test("a delayed WebKit shutdown cannot block or overwrite the next scene", () =>
     JSON.parse(localStorage.getItem(progressKey(student)))[2].reading[1],
   ).toBe(100);
 });
+
+test("a recognizer still closing in WebKit is replaced automatically", () => {
+  render(<App />);
+  reading();
+  say("Colin wanted to get easy money from the hospital.");
+  SpeechMock.latest.start = () => {
+    const e = new Error("closing");
+    e.name = "InvalidStateError";
+    throw e;
+  };
+  fireEvent.click(screen.getByRole("button", { name: "次のシーンへ ▶" }));
+  fireEvent.click(screen.getByRole("button", { name: "🎙 音読スタート" }));
+  act(() => jest.advanceTimersByTime(850));
+  expect(SpeechMock.count).toBe(2);
+  act(() =>
+    SpeechMock.latest.say("Colin: Doctor, I have lost my sense of taste."),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "■ 終了・判定" }));
+  expect(
+    JSON.parse(localStorage.getItem(progressKey(student)))[2].reading[1],
+  ).toBe(100);
+});
