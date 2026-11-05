@@ -53,7 +53,6 @@ const reading = () =>
   fireEvent.click(screen.getByRole("button", { name: /📖.*じっくり学習/ }));
 const say = (text) => {
   fireEvent.click(screen.getByRole("button", { name: "🎙 音読スタート" }));
-  act(() => jest.advanceTimersByTime(350));
   act(() => SpeechMock.latest.say(text));
   fireEvent.click(screen.getByRole("button", { name: "■ 終了・判定" }));
 };
@@ -117,7 +116,7 @@ test("tap placement completes puzzle once and records elapsed seconds", () => {
   expect(JSON.parse(localStorage.getItem("storyMatchHistory"))).toHaveLength(1);
 });
 
-test("the same microphone transcribes scenes 1, 2 and 3 without recreating the service", () => {
+test("scenes 1, 2 and 3 each start a fresh recognizer directly from the tap", () => {
   render(<App />);
   reading();
   const lines = [
@@ -130,7 +129,7 @@ test("the same microphone transcribes scenes 1, 2 and 3 without recreating the s
     expect(
       JSON.parse(localStorage.getItem(progressKey(student)))[2].reading[i],
     ).toBe(100);
-    expect(SpeechMock.count).toBe(1);
+    expect(SpeechMock.count).toBe(i + 1);
     if (i < 2)
       fireEvent.click(screen.getByRole("button", { name: "次のシーンへ ▶" }));
   }
@@ -142,7 +141,7 @@ test("silent recognizers reconnect and do not leak the previous scene transcript
   fireEvent.click(screen.getByRole("button", { name: "次のシーンへ ▶" }));
   fireEvent.click(screen.getByRole("button", { name: "🎙 音読スタート" }));
   act(() => jest.advanceTimersByTime(8850));
-  expect(SpeechMock.count).toBe(2);
+  expect(SpeechMock.count).toBe(3);
   act(() =>
     SpeechMock.latest.say("Colin: Doctor, I have lost my sense of taste."),
   );
@@ -183,7 +182,7 @@ test("a delayed WebKit shutdown cannot block or overwrite the next scene", () =>
   ).toBe(100);
 });
 
-test("a recognizer still closing in WebKit is replaced automatically", () => {
+test("the previous recognizer is never reused after advancing a scene", () => {
   render(<App />);
   reading();
   say("Colin wanted to get easy money from the hospital.");
@@ -203,4 +202,35 @@ test("a recognizer still closing in WebKit is replaced automatically", () => {
   expect(
     JSON.parse(localStorage.getItem(progressKey(student)))[2].reading[1],
   ).toBe(100);
+});
+
+test("manual start in every scene remains inside the trusted click task", () => {
+  const Base = SpeechMock;
+  let userActivation = false;
+  window.SpeechRecognition = class extends Base {
+    start() {
+      if (!userActivation) throw new Error("user activation lost");
+      super.start();
+    }
+  };
+  render(<App />);
+  reading();
+  const lines = [
+    "Colin wanted to get easy money from the hospital.",
+    "Colin: Doctor, I have lost my sense of taste.",
+    "Doctor: Nurse, please bring the medicine from box 22.",
+  ];
+  for (let i = 0; i < lines.length; i++) {
+    userActivation = true;
+    fireEvent.click(screen.getByRole("button", { name: "🎙 音読スタート" }));
+    userActivation = false;
+    expect(SpeechMock.count).toBe(i + 1);
+    act(() => SpeechMock.latest.say(lines[i]));
+    fireEvent.click(screen.getByRole("button", { name: "■ 終了・判定" }));
+    expect(
+      JSON.parse(localStorage.getItem(progressKey(student)))[2].reading[i],
+    ).toBe(100);
+    if (i < 2)
+      fireEvent.click(screen.getByRole("button", { name: "次のシーンへ ▶" }));
+  }
 });

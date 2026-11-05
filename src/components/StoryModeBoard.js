@@ -31,6 +31,7 @@ function Scene({
       }
     },
     score,
+    `${unit}:${index}`,
   );
   const stopAudio = () => {
     if (audio.current) {
@@ -80,6 +81,10 @@ function Scene({
     };
     a.onerror = once;
     a.play().catch(once);
+  };
+  const tapFeedback = () => {
+    if (!feedback.current) feedback.current = createFeedback(window);
+    feedback.current.tone("tap");
   };
   const passed = best >= 80 || result >= 80;
   return (
@@ -132,11 +137,17 @@ function Scene({
               spoken ||
               "音読すると、ここに英文が表示されます。"}
           </p>
-          <small role="status">{mic.status}</small>
+          <small role="status" data-mic-state={mic.phase}>
+            {mic.status}
+          </small>
         </div>
         <button
           className="subtle reconnect-mic"
-          onClick={mic.reconnect}
+          onClick={() => {
+            stopAudio();
+            tapFeedback();
+            mic.reconnect();
+          }}
           disabled={mic.phase === "scoring"}
         >
           マイクを再接続
@@ -147,14 +158,18 @@ function Scene({
         <button
           className="subtle"
           disabled={index === 0 || mic.phase !== "idle"}
-          onClick={onPrev}
+          onClick={() => {
+            mic.cancel();
+            onPrev();
+          }}
         >
           ◀ 前へ
         </button>
         <button
           className="primary"
-          disabled={mic.phase === "scoring" || mic.phase === "connecting"}
+          disabled={mic.phase === "scoring"}
           onClick={() => {
+            tapFeedback();
             if (mic.phase === "listening") mic.stop();
             else {
               stopAudio();
@@ -165,16 +180,18 @@ function Scene({
         >
           {mic.phase === "listening"
             ? "■ 終了・判定"
-            : mic.phase === "connecting"
-              ? "マイク接続中…"
-              : mic.phase === "scoring"
-                ? "判定中…"
-                : "🎙 音読スタート"}
+            : mic.phase === "scoring"
+              ? "判定中…"
+              : "🎙 音読スタート"}
         </button>
         <button
           className="primary next"
           disabled={!passed || mic.phase !== "idle"}
-          onClick={index === total - 1 ? onBack : onNext}
+          onClick={() => {
+            mic.cancel();
+            if (index === total - 1) onBack();
+            else onNext();
+          }}
         >
           {index === total - 1 ? "✓ 学習進捗へ" : "次のシーンへ ▶"}
         </button>
