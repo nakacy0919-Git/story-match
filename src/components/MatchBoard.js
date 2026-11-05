@@ -1,31 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { playSound } from '../utils/sound';
+import { shuffle } from '../utils/game';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-
-const playSound = (type) => {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  if (type === 'correct') {
-    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
-      const osc = ctx.createOscillator(); const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'sine'; const startTime = ctx.currentTime + i * 0.05; 
-      osc.frequency.setValueAtTime(freq, startTime); gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(0.4, startTime + 0.02); gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
-      osc.start(startTime); osc.stop(startTime + 0.5);
-    });
-  } else if (type === 'wrong') {
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'triangle'; osc.frequency.setValueAtTime(150, ctx.currentTime);
-    gain.gain.setValueAtTime(0, ctx.currentTime); gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-    osc.start(); osc.stop(ctx.currentTime + 0.3);
-  } else if (type === 'fanfare') {
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'square'; [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => { osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.15); });
-    gain.gain.setValueAtTime(0, ctx.currentTime); gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.05);
-    osc.start(); osc.stop(ctx.currentTime + 1.2);
-  }
-};
 
 const MatchBoard = ({ storyData, onGameStart, onGameClear, onMistake, onRetry, mistakeCount, unit, isCleared, finalTime, bestTime, retryCount, onHintUsed, level, studentInfo }) => {
   const [slots, setSlots] = useState(Array(12).fill(null));
@@ -33,9 +9,13 @@ const MatchBoard = ({ storyData, onGameStart, onGameClear, onMistake, onRetry, m
   const [correctFlags, setCorrectFlags] = useState(Array(12).fill(false));
   const [hintFlags, setHintFlags] = useState(Array(12).fill(false));
   const [errorSlot, setErrorSlot] = useState(null);
+  const errorTimeoutRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(errorTimeoutRef.current), []);
 
   useEffect(() => {
     if (!storyData) return;
+    clearTimeout(errorTimeoutRef.current);
     let initialSlots = Array(12).fill(null);
     let initialFlags = Array(12).fill(false);
     let hintIndices = [];
@@ -52,8 +32,8 @@ const MatchBoard = ({ storyData, onGameStart, onGameClear, onMistake, onRetry, m
     const deckImages = Array.from({ length: 12 }, (_, i) => ({
       id: (i + 1).toString(), 
       url: process.env.PUBLIC_URL + `/images/unit${unit}/${i + 1}.webp` 
-    })).filter(img => !hintIndices.includes(parseInt(img.id) - 1)).sort(() => Math.random() - 0.5);
-    setDeck(deckImages);
+    })).filter(img => !hintIndices.includes(parseInt(img.id, 10) - 1));
+    setDeck(shuffle(deckImages));
   }, [unit, retryCount, storyData, level]);
 
   useEffect(() => { if (isCleared) playSound('fanfare'); }, [isCleared]);
@@ -91,7 +71,8 @@ const MatchBoard = ({ storyData, onGameStart, onGameClear, onMistake, onRetry, m
         playSound('wrong');
         onMistake(); 
         setErrorSlot(slotIdx);
-        setTimeout(() => setErrorSlot(null), 600);
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = setTimeout(() => setErrorSlot(null), 600);
         newDeck.splice(source.index, 0, movedItem);
       }
     } else { newDeck.splice(destination.index, 0, movedItem); }
@@ -132,6 +113,7 @@ const MatchBoard = ({ storyData, onGameStart, onGameClear, onMistake, onRetry, m
                           )}
                         </Draggable>
                       )}
+                      {provided.placeholder}
                       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }}>
                         {correctFlags[index] && <><div className="correct-ripple"></div><div className="pop-icon-gorgeous" style={{ color: '#4caf50', fontSize: '4rem' }}>⭕</div></>}
                         {errorSlot === index && <div className="pop-icon" style={{ color: '#f44336', fontSize: '3rem' }}>❌</div>}

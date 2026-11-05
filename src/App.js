@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { readStoredJSON, writeStoredJSON } from './utils/storage';
 import Timer from './components/Timer';
 import MatchBoard from './components/MatchBoard';
 import RandomModeBoard from './components/RandomModeBoard';
@@ -57,13 +58,14 @@ function App() {
   // 生徒情報
   // ============================================================
 
-  const [studentInfo, setStudentInfo] = useState(() =>
-    JSON.parse(localStorage.getItem('storyMatchStudent')) || {
-      class: '',
-      number: '',
-      name: ''
-    }
-  );
+  const [studentInfo, setStudentInfo] = useState(() => {
+    const stored = readStoredJSON('storyMatchStudent', {});
+    return {
+      class: typeof stored?.class === 'string' ? stored.class : '',
+      number: typeof stored?.number === 'string' ? stored.number : '',
+      name: typeof stored?.name === 'string' ? stored.name : ''
+    };
+  });
 
   const [isRegistered, setIsRegistered] = useState(
     !!studentInfo.class &&
@@ -75,13 +77,23 @@ function App() {
   // 学習履歴
   // ============================================================
 
-  const [history, setHistory] = useState(() =>
-    JSON.parse(localStorage.getItem('storyMatchHistory')) || []
-  );
+  const [history, setHistory] = useState(() => {
+    const stored = readStoredJSON('storyMatchHistory', []);
+    return Array.isArray(stored)
+      ? stored.filter(entry => entry && typeof entry === 'object' && Number.isFinite(entry.result)).slice(0, 100)
+      : [];
+  });
 
-  const [bestTimes, setBestTimes] = useState(() =>
-    JSON.parse(localStorage.getItem('storyMatchBestTimes')) || {}
-  );
+  const [bestTimes, setBestTimes] = useState(() => {
+    const stored = readStoredJSON('storyMatchBestTimes', {});
+    return stored && typeof stored === 'object' && !Array.isArray(stored)
+      ? Object.fromEntries(Object.entries(stored).filter(([, time]) => Number.isFinite(time) && time >= 0))
+      : {};
+  });
+
+  // Prevent double submission when callbacks or browser events fire twice.
+  const gameClearRecordedRef = useRef(false);
+  const puzzleLogSavedRef = useRef(false);
 
   // ============================================================
   // 現在のUnit
@@ -125,10 +137,7 @@ function App() {
 
         setBestTimes(newBests);
 
-        localStorage.setItem(
-          'storyMatchBestTimes',
-          JSON.stringify(newBests)
-        );
+        writeStoredJSON('storyMatchBestTimes', newBests);
       }
     }
   }, [
@@ -144,7 +153,7 @@ function App() {
   // 学習履歴保存
   // ============================================================
 
-  const saveLearningLog = (data) => {
+  const saveLearningLog = useCallback((data) => {
     const newLog = {
       date: new Date().toISOString(),
       unit: currentUnit,
@@ -154,36 +163,38 @@ function App() {
       level: data.level || null
     };
 
-    const newHistory = [
-      newLog,
-      ...history
-    ].slice(0, 100);
-
-    setHistory(newHistory);
-
-    localStorage.setItem(
-      'storyMatchHistory',
-      JSON.stringify(newHistory)
-    );
-  };
+    setHistory(previous => {
+      const updated = [newLog, ...previous].slice(0, 100);
+      writeStoredJSON('storyMatchHistory', updated);
+      return updated;
+    });
+  }, [currentUnit]);
 
   // ============================================================
   // Game Clear
   // ============================================================
 
   const handleGameClear = (resultData) => {
+    if (gameClearRecordedRef.current) return;
+    gameClearRecordedRef.current = true;
     setIsCleared(true);
 
-    saveLearningLog({
-      mode: gameMode,
-      result: resultData.result,
-      mistakes: mistakeCount,
-      level:
-        gameMode === 'puzzle'
-          ? level
-          : null
-    });
+    // Puzzle time is only final after Timer sees isCleared. Logging it here
+    // used to store 0 seconds for nearly every completed puzzle.
+    if (gameMode !== 'puzzle') {
+      saveLearningLog({
+        mode: gameMode,
+        result: resultData.result,
+        mistakes: mistakeCount
+      });
+    }
   };
+
+  useEffect(() => {
+    if (gameMode !== 'puzzle' || !isCleared || finalTime === null || puzzleLogSavedRef.current) return;
+    puzzleLogSavedRef.current = true;
+    saveLearningLog({ mode: 'puzzle', result: finalTime, mistakes: mistakeCount, level });
+  }, [gameMode, isCleared, finalTime, mistakeCount, level, saveLearningLog]);
 
   // ============================================================
   // 生徒登録
@@ -197,10 +208,7 @@ function App() {
       studentInfo.number &&
       studentInfo.name
     ) {
-      localStorage.setItem(
-        'storyMatchStudent',
-        JSON.stringify(studentInfo)
-      );
+      writeStoredJSON('storyMatchStudent', studentInfo);
 
       setIsRegistered(true);
     }
@@ -241,6 +249,8 @@ function App() {
   // ============================================================
 
   const resetGameState = () => {
+    gameClearRecordedRef.current = false;
+    puzzleLogSavedRef.current = false;
     setIsStarted(false);
 
     setIsCleared(false);
@@ -1398,10 +1408,7 @@ function App() {
                     setIsStarted(true)
                   }
                   onGameClear={() =>
-                    handleGameClear({
-                      result:
-                        finalTime || 0
-                    })
+                    handleGameClear({})
                   }
                   onMistake={() =>
                     setMistakeCount(
