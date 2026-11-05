@@ -246,6 +246,7 @@ const StoryModeBoard = ({
   // ==========================================================
 
   const audioRef = useRef(null);
+  const fallbackUtteranceRef = useRef(null);
 
 
   // ==========================================================
@@ -311,6 +312,7 @@ const StoryModeBoard = ({
 
       window.speechSynthesis.cancel();
     }
+    fallbackUtteranceRef.current = null;
   };
 
 
@@ -423,42 +425,42 @@ const StoryModeBoard = ({
   // ==========================================================
 
   const playAudio = () => {
-
     stopAudio();
 
-
-    const audioUrl =
-      `${process.env.PUBLIC_URL}/audio/unit${unit}/${currentIndex + 1}.mp3`;
-
-
-    const audio =
-      new Audio(audioUrl);
-
-
-    audioRef.current =
-      audio;
-
-
-    audio.onerror = () => {
-
-      console.warn(
-        'Audio file not found:',
-        audioUrl
-      );
+    const speakFallback = () => {
+      const synth = window.speechSynthesis;
+      const Utterance = window.SpeechSynthesisUtterance;
+      const text = storyData?.[currentIndex]?.en;
+      if (!synth || !Utterance || !text) return;
+      try {
+        const utterance = new Utterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.85;
+        fallbackUtteranceRef.current = utterance;
+        synth.speak(utterance);
+      } catch (error) {
+        console.warn('Text-to-speech unavailable:', error);
+      }
     };
 
-
-    audio.play().catch(
-      (error) => {
-
-        console.warn(
-          'Audio playback failed:',
-          error
-        );
+    // Only Unit 7 and Unit 8 have recorded audio files in this repository.
+    if (Number(unit) !== 7 && Number(unit) !== 8) {
+      speakFallback();
+      return;
+    }
+    const audioUrl = process.env.PUBLIC_URL + '/audio/unit' + unit + '/' + (currentIndex + 1) + '.mp3';
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    audio.onerror = () => {
+      if (audioRef.current === audio) speakFallback();
+    };
+    audio.play().catch(error => {
+      if (audioRef.current === audio) {
+        console.warn('Audio playback failed:', error);
+        speakFallback();
       }
-    );
+    });
   };
-
 
   // ==========================================================
   // 前へ
