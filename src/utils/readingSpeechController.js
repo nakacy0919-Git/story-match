@@ -7,6 +7,7 @@ export function createReadingSpeechController({
   onChange,
   onScore,
   calculate,
+  getThreshold = () => 80,
 }) {
   const state = {
     item: null,
@@ -111,9 +112,9 @@ export function createReadingSpeechController({
       phase: "idle",
       transcript: spoken,
       status:
-        result >= 80
+        result >= getThreshold()
           ? "✓ 合格！次のシーンに進めます。"
-          : "80%以上で合格です。もう一度挑戦しましょう。",
+          : `${getThreshold()}%以上で合格です。もう一度挑戦しましょう。`,
     });
     onScore(result, spoken, item.id);
   }

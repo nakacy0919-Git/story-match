@@ -10,6 +10,7 @@ const RandomModeBoard = ({
   qCount,
   onGameClear,
   studentInfo,
+  minPoints = 0,
 }) => {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -126,13 +127,14 @@ const RandomModeBoard = ({
           <h2
             style={{ color: "#FF8C00", fontSize: "2.5rem", margin: "0 0 20px" }}
           >
-            ⚡ SPEED MODE CLEAR! ⚡
+            {score >= minPoints ? "⚡ SPEED MODE CLEAR! ⚡" : "もう一度挑戦！"}
           </h2>
           <div
             style={{ fontSize: "5rem", color: "#4caf50", fontWeight: "900" }}
           >
             {score} pts
           </div>
+          <p>合格基準：{minPoints}点以上（全問コース）</p>
           <button
             onClick={onRetry}
             style={{

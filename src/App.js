@@ -16,6 +16,8 @@ import {
   sceneScores,
 } from "./utils/progress";
 import "./App.css";
+import AdminSettings from "./components/AdminSettings";
+import { useMissionRules } from "./utils/useMissionRules";
 
 const modes = [
   ["reading", "📖", "じっくり学習", "絵本のように", "ストーリーを読む"],
@@ -35,6 +37,7 @@ function restoredStudent() {
   };
 }
 function App() {
+  const { rules, accept: acceptRules } = useMissionRules();
   const [student, setStudent] = useState(restoredStudent);
   const [draft, setDraft] = useState(student);
   const [registered, setRegistered] = useState(
@@ -67,8 +70,10 @@ function App() {
   const data = allUnitsData[unit] || allUnitsData[units[0]];
   const total = data.length,
     record = progress[unit] || {};
-  const done = completedModes(record, total);
-  const passed = sceneScores(record, total).filter((n) => n >= 80).length;
+  const done = completedModes(record, total, rules);
+  const passed = sceneScores(record, total).filter(
+    (n) => n >= rules.readingAccuracy,
+  ).length;
   const persist = (next) => {
     setProgress(next);
     setStorageError(!writeStoredJSON(progressKey(student), next));
@@ -142,6 +147,14 @@ function App() {
     setStorageError(!writeStoredJSON("storyMatchStudent", next));
     setView("dashboard");
   };
+  if (view === "admin")
+    return (
+      <AdminSettings
+        rules={rules}
+        onSave={acceptRules}
+        onBack={() => setView("dashboard")}
+      />
+    );
   if (!registered)
     return (
       <main className="registration">
@@ -166,6 +179,13 @@ function App() {
             </label>
           ))}
           <button className="primary">Start Learning</button>
+          <button
+            type="button"
+            className="subtle"
+            onClick={() => setView("admin")}
+          >
+            管理者設定
+          </button>
         </form>
       </main>
     );
@@ -177,7 +197,7 @@ function App() {
             {passed}
             <small> / {total} Scenes</small>
           </strong>
-          <span>Accuracy 80%以上でクリア</span>
+          <span>Accuracy {rules.readingAccuracy}%以上でクリア</span>
         </>
       );
     if (id === "puzzle") {
@@ -192,7 +212,10 @@ function App() {
           <span>
             {records.length
               ? records.map(([l, r]) => `L${l}: ${r.best}秒`).join(" · ")
-              : "ベストタイムを記録"}
+              : "ベストタイムを記録"}{" "}
+            {rules.puzzleSeconds
+              ? ` / 合格 ${rules.puzzleSeconds}秒以内`
+              : " / 時間制限なし"}
           </span>
         </>
       );
@@ -214,7 +237,7 @@ function App() {
               ? `${r.bestByCount?.[total] !== undefined ? total : r.count}問のベストスコア`
               : "以前のスコア（問題数不明）"
             : "スコアを記録"}{" "}
-          · 全{total}問でクリア
+          · 全{total}問・{rules[id + "Points"]}点以上
         </span>
       </>
     );
@@ -242,13 +265,24 @@ function App() {
           </div>
           <button
             className="subtle"
-            onClick={() => {
-              const pw = window.prompt(
-                "先生のパスワードを入力してください（情報の書き換え）:",
+            onClick={async () => {
+              const password = window.prompt(
+                "管理者パスワードを入力してください（情報の書き換え）:",
               );
-              if (pw === "3939") {
+              if (!password) return;
+              try {
+                const response = await fetch("/api/mission-settings", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "verify", password }),
+                });
+                if (!response.ok) throw Error("認証できませんでした。");
                 setDraft(student);
                 setRegistered(false);
+              } catch (_) {
+                window.alert(
+                  "認証できませんでした。パスワードと通信状態を確認してください。",
+                );
               }
             }}
           >
@@ -265,7 +299,11 @@ function App() {
         <section className="dashboard">
           <nav className="unit-grid" aria-label="ユニットごとの学習進捗">
             {units.map((n) => {
-              const flags = completedModes(progress[n], allUnitsData[n].length);
+              const flags = completedModes(
+                progress[n],
+                allUnitsData[n].length,
+                rules,
+              );
               return (
                 <button
                   key={n}
@@ -347,11 +385,11 @@ function App() {
             {sceneScores(record, total).map((n, i) => (
               <span
                 key={i}
-                className={n >= 80 ? "passed" : ""}
+                className={n >= rules.readingAccuracy ? "passed" : ""}
                 title={"Scene " + (i + 1) + ": " + n + "%"}
               >
                 {i + 1}
-                {n >= 80 ? " ✓" : ""}
+                {n >= rules.readingAccuracy ? " ✓" : ""}
               </span>
             ))}
           </div>
@@ -362,6 +400,9 @@ function App() {
                 : "4つのミッションをクリアしたら、この画面をスクリーンショットで先生に提出しましょう。"}
               <small>記録はこの端末・このブラウザに保存されます。</small>
             </p>
+            <button className="subtle" onClick={() => setView("admin")}>
+              ⚙ 管理者
+            </button>
             <button className="subtle" onClick={() => setView("history")}>
               📊 学習の記録
             </button>
@@ -417,7 +458,8 @@ function App() {
                 <>
                   <p>
                     全{total}
-                    問を終えるとミッションクリア。短い練習も記録します。
+                    問を終え、{rules[mode + "Points"]}
+                    点以上でミッションクリア。短い練習も記録します。
                   </p>
                   <div className="setting-options">
                     {[3, 6, "ALL"].map((c) => (
@@ -446,6 +488,7 @@ function App() {
                 <StoryModeBoard
                   storyData={data}
                   unit={unit}
+                  threshold={rules.readingAccuracy}
                   scores={sceneScores(record, total)}
                   onScore={(scene, score) => save("reading", score, { scene })}
                   onBack={back}
@@ -455,6 +498,7 @@ function App() {
                 <MatchBoard
                   storyData={data}
                   unit={unit}
+                  limitSeconds={rules.puzzleSeconds}
                   level={level}
                   retryCount={attempt}
                   studentInfo={student}
@@ -481,6 +525,7 @@ function App() {
                   storyData={data}
                   unit={unit}
                   retryCount={attempt}
+                  minPoints={rules[mode + "Points"]}
                   qCount={count}
                   onGameClear={finish}
                   onRetry={reset}
@@ -492,6 +537,7 @@ function App() {
                   storyData={data}
                   unit={unit}
                   retryCount={attempt}
+                  minPoints={rules[mode + "Points"]}
                   qCount={count}
                   onGameClear={finish}
                   onRetry={reset}

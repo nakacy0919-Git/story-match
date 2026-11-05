@@ -32,6 +32,7 @@ export default function MatchBoard({
   storyData,
   unit,
   level,
+  limitSeconds = 0,
   onGameStart,
   onGameClear,
   onMistake,
@@ -202,13 +203,22 @@ export default function MatchBoard({
           {isCleared ? (
             <div className="puzzle-result">
               <span className="eyebrow">MISSION COMPLETE</span>
-              <h2>🧩 CLEAR!</h2>
+              <h2>
+                {!limitSeconds || finalTime <= limitSeconds
+                  ? "🧩 CLEAR!"
+                  : "もう一度挑戦！"}
+              </h2>
               <b>{studentInfo.name}</b>
               <strong>{finalTime} 秒</strong>
               <span>
                 Level {level} · Best {bestTime ?? finalTime}秒
               </span>
-              <span>ミス {mistakeCount}回</span>
+              <span>
+                {limitSeconds
+                  ? `合格基準 ${limitSeconds}秒以内`
+                  : "時間制限なし"}{" "}
+                · ミス {mistakeCount}回
+              </span>
               <button className="primary" onClick={onRetry}>
                 🔄 Retry
               </button>

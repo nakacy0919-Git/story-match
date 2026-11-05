@@ -10,6 +10,7 @@ function Scene({
   unit,
   best,
   onScore,
+  threshold,
   onPrev,
   onNext,
   onSkip,
@@ -29,7 +30,7 @@ function Scene({
       setResult(percent);
       setSpoken(text);
       onScore(index, percent);
-      if (percent >= 80) {
+      if (percent >= threshold) {
         if (!feedback.current) feedback.current = createFeedback(window);
         feedback.current.tone("80");
         clearTimeout(celebrationTimer.current);
@@ -39,6 +40,7 @@ function Scene({
     },
     score,
     `${unit}:${index}`,
+    threshold,
   );
   const stopAudio = () => {
     if (audio.current) {
@@ -101,7 +103,7 @@ function Scene({
     if (!feedback.current) feedback.current = createFeedback(window);
     feedback.current.tone("tap");
   };
-  const passed = best >= 80 || result >= 80;
+  const passed = best >= threshold || (result !== null && result >= threshold);
   return (
     <section className="reading-studio">
       {celebration > 0 && <ReadingCelebration id={celebration} />}
@@ -110,7 +112,7 @@ function Scene({
           Scene {index + 1} / {total}
         </span>
         <span className={"badge " + (passed ? "complete" : "")}>
-          {passed ? "✓ CLEAR" : "Accuracy 80%以上で合格"}
+          {passed ? "✓ CLEAR" : `Accuracy ${threshold}%以上で合格`}
         </span>
       </div>
       <div
@@ -231,11 +233,12 @@ export default function StoryModeBoard({
   storyData,
   unit,
   scores,
+  threshold = 80,
   onScore,
   onBack,
 }) {
   const [index, setIndex] = useState(() => {
-    const first = scores.findIndex((n) => n < 80);
+    const first = scores.findIndex((n) => n < threshold);
     return first < 0 ? 0 : first;
   });
   return (
@@ -244,11 +247,12 @@ export default function StoryModeBoard({
       index={index}
       total={storyData.length}
       unit={unit}
+      threshold={threshold}
       best={scores[index]}
       onScore={onScore}
       onPrev={() => setIndex((i) => Math.max(0, i - 1))}
       onNext={() => {
-        if (scores[index] >= 80)
+        if (scores[index] >= threshold)
           setIndex((i) => Math.min(storyData.length - 1, i + 1));
       }}
       onSkip={() => setIndex((i) => Math.min(storyData.length - 1, i + 1))}
