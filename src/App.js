@@ -1,1656 +1,501 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { readStoredJSON, writeStoredJSON } from './utils/storage';
-import Timer from './components/Timer';
-import MatchBoard from './components/MatchBoard';
-import RandomModeBoard from './components/RandomModeBoard';
-import StoryModeBoard from './components/StoryModeBoard';
-import ListeningModeBoard from './components/ListeningModeBoard';
-import HistoryBoard from './components/HistoryBoard';
-import { allUnitsData } from './unitsData';
+import React, { useState, useRef } from "react";
+import MatchBoard from "./components/MatchBoard";
+import RandomModeBoard from "./components/RandomModeBoard";
+import StoryModeBoard from "./components/StoryModeBoard";
+import ListeningModeBoard from "./components/ListeningModeBoard";
+import HistoryBoard from "./components/HistoryBoard";
+import { allUnitsData } from "./unitsData";
+import { readStoredJSON, writeStoredJSON } from "./utils/storage";
+import {
+  loadProgress,
+  restoreWithLegacy,
+  progressKey,
+  profileKey,
+  recordResult,
+  completedModes,
+  sceneScores,
+} from "./utils/progress";
+import "./App.css";
 
-const pastelColors = [
-  '#FFB3BA',
-  '#FFDFBA',
-  '#FFFFBA',
-  '#BAFFC9',
-  '#BAE1FF',
-  '#D0BAFF',
-  '#FFB3F7',
-  '#FFD1D1',
-  '#FFF4E6',
-  '#E6FFE6',
-  '#E6F4FF',
-  '#E6E6FA',
-  '#FFE6E6',
-  '#FFFFE6',
-  '#E6FFFF'
+const modes = [
+  ["reading", "📖", "じっくり学習", "絵本のように", "ストーリーを読む"],
+  ["puzzle", "🧩", "パズルモード", "空欄に画像を当てはめ", "物語を完成させる"],
+  ["random", "⚡", "ランダムモード", "英文からイラストを", "素早く見極める"],
+  ["listening", "🎧", "リスニング", "流れる音声を聞いて", "正しい画像を選ぶ"],
 ];
-
+const units = Object.keys(allUnitsData)
+  .map(Number)
+  .filter((n) => allUnitsData[n]?.length);
+function restoredStudent() {
+  const s = readStoredJSON("storyMatchStudent", {});
+  return {
+    class: typeof s?.class === "string" ? s.class : "",
+    number: String(s?.number || ""),
+    name: typeof s?.name === "string" ? s.name : "",
+  };
+}
 function App() {
-  // ============================================================
-  // 基本状態
-  // ============================================================
-
-  const [currentUnit, setCurrentUnit] = useState(2);
-  const [view, setView] = useState('mode-select');
-
-  // reading / puzzle / random / listening
-  const [gameMode, setGameMode] = useState('puzzle');
-
-  const [level, setLevel] = useState(3);
-  const [qCount, setQCount] = useState(12);
-
-  const [isStarted, setIsStarted] = useState(false);
-  const [isCleared, setIsCleared] = useState(false);
-
-  const [finalTime, setFinalTime] = useState(null);
-  const [mistakeCount, setMistakeCount] = useState(0);
-  const [retryCount, setRetryCount] = useState(0);
-  const [penaltySeconds, setPenaltySeconds] = useState(0);
-
-  // ============================================================
-  // じっくり学習：現在のScene
-  // ============================================================
-
-  const [readingSceneIndex, setReadingSceneIndex] = useState(0);
-
-  // ============================================================
-  // 生徒情報
-  // ============================================================
-
-  const [studentInfo, setStudentInfo] = useState(() => {
-    const stored = readStoredJSON('storyMatchStudent', {});
-    return {
-      class: typeof stored?.class === 'string' ? stored.class : '',
-      number: typeof stored?.number === 'string' ? stored.number : '',
-      name: typeof stored?.name === 'string' ? stored.name : ''
-    };
-  });
-
-  const [isRegistered, setIsRegistered] = useState(
-    !!studentInfo.class &&
-    !!studentInfo.number &&
-    !!studentInfo.name
+  const [student, setStudent] = useState(restoredStudent);
+  const [draft, setDraft] = useState(student);
+  const [registered, setRegistered] = useState(
+    !!(student.class && student.number && student.name),
   );
-
-  // ============================================================
-  // 学習履歴
-  // ============================================================
-
+  const [progress, setProgress] = useState(() => restoreWithLegacy(student));
+  const [storageError, setStorageError] = useState(false);
   const [history, setHistory] = useState(() => {
-    const stored = readStoredJSON('storyMatchHistory', []);
+    const stored = readStoredJSON("storyMatchHistory", []);
     return Array.isArray(stored)
-      ? stored.filter(entry => entry && typeof entry === 'object' && Number.isFinite(entry.result)).slice(0, 100)
+      ? stored.filter((x) => x && Number.isFinite(x.result))
       : [];
   });
-
-  const [bestTimes, setBestTimes] = useState(() => {
-    const stored = readStoredJSON('storyMatchBestTimes', {});
-    return stored && typeof stored === 'object' && !Array.isArray(stored)
-      ? Object.fromEntries(Object.entries(stored).filter(([, time]) => Number.isFinite(time) && time >= 0))
-      : {};
-  });
-
-  // Prevent double submission when callbacks or browser events fire twice.
-  const gameClearRecordedRef = useRef(false);
-  const puzzleLogSavedRef = useRef(false);
-
-  // ============================================================
-  // 現在のUnit
-  // ============================================================
-
-  const currentStoryData = allUnitsData[currentUnit];
-
-  // ★重要
-  // 以前は length === 12 だったため、
-  // 12個以外だと工事中扱いになっていた。
-  //
-  // データが1個以上あれば使用可能に変更。
-  const hasData =
-    Array.isArray(currentStoryData) &&
-    currentStoryData.length > 0;
-
-  // ============================================================
-  // Puzzle Best Time
-  // ============================================================
-
-  useEffect(() => {
-    if (
-      gameMode === 'puzzle' &&
-      isCleared &&
-      finalTime !== null
-    ) {
-      const bestKey =
-        `${currentUnit}-L${level}`;
-
-      const currentBest =
-        bestTimes[bestKey];
-
-      if (
-        !currentBest ||
-        finalTime < currentBest
-      ) {
-        const newBests = {
-          ...bestTimes,
-          [bestKey]: finalTime
-        };
-
-        setBestTimes(newBests);
-
-        writeStoredJSON('storyMatchBestTimes', newBests);
-      }
-    }
-  }, [
-    isCleared,
-    finalTime,
-    currentUnit,
-    bestTimes,
-    gameMode,
-    level
-  ]);
-
-  // ============================================================
-  // 学習履歴保存
-  // ============================================================
-
-  const saveLearningLog = useCallback((data) => {
-    const newLog = {
+  const [unit, setUnit] = useState(() =>
+    units.includes(Number(readStoredJSON("storyMatchLastUnit", 2)))
+      ? Number(readStoredJSON("storyMatchLastUnit", 2))
+      : 2,
+  );
+  const [view, setView] = useState("dashboard");
+  const [mode, setMode] = useState("reading");
+  const [level, setLevel] = useState(3);
+  const [count, setCount] = useState("ALL");
+  const [attempt, setAttempt] = useState(0);
+  const [cleared, setCleared] = useState(false);
+  const [mistakes, setMistakes] = useState(0);
+  const [finalTime, setFinalTime] = useState(null);
+  const startedAt = useRef(null),
+    penalty = useRef(0),
+    saved = useRef(false);
+  const data = allUnitsData[unit] || allUnitsData[units[0]];
+  const total = data.length,
+    record = progress[unit] || {};
+  const done = completedModes(record, total);
+  const passed = sceneScores(record, total).filter((n) => n >= 80).length;
+  const persist = (next) => {
+    setProgress(next);
+    setStorageError(!writeStoredJSON(progressKey(student), next));
+  };
+  const save = (gameMode, result, extra = {}) => {
+    persist(
+      recordResult(progress, unit, gameMode, result, { total, ...extra }),
+    );
+    if (gameMode === "reading") return;
+    const log = {
       date: new Date().toISOString(),
-      unit: currentUnit,
-      mode: data.mode,
-      result: data.result,
-      mistakes: data.mistakes || 0,
-      level: data.level || null
+      unit,
+      mode: gameMode,
+      result,
+      mistakes,
+      level: gameMode === "puzzle" ? level : null,
+      student: profileKey(student),
     };
-
-    setHistory(previous => {
-      const updated = [newLog, ...previous].slice(0, 100);
-      writeStoredJSON('storyMatchHistory', updated);
-      return updated;
-    });
-  }, [currentUnit]);
-
-  // ============================================================
-  // Game Clear
-  // ============================================================
-
-  const handleGameClear = (resultData) => {
-    if (gameClearRecordedRef.current) return;
-    gameClearRecordedRef.current = true;
-    setIsCleared(true);
-
-    // Puzzle time is only final after Timer sees isCleared. Logging it here
-    // used to store 0 seconds for nearly every completed puzzle.
-    if (gameMode !== 'puzzle') {
-      saveLearningLog({
-        mode: gameMode,
-        result: resultData.result,
-        mistakes: mistakeCount
-      });
-    }
+    const next = [log, ...history].slice(0, 100);
+    setHistory(next);
+    if (!writeStoredJSON("storyMatchHistory", next)) setStorageError(true);
   };
-
-  useEffect(() => {
-    if (gameMode !== 'puzzle' || !isCleared || finalTime === null || puzzleLogSavedRef.current) return;
-    puzzleLogSavedRef.current = true;
-    saveLearningLog({ mode: 'puzzle', result: finalTime, mistakes: mistakeCount, level });
-  }, [gameMode, isCleared, finalTime, mistakeCount, level, saveLearningLog]);
-
-  // ============================================================
-  // 生徒登録
-  // ============================================================
-
-  const handleRegister = (e) => {
-    e.preventDefault();
-
-    if (
-      studentInfo.class &&
-      studentInfo.number &&
-      studentInfo.name
-    ) {
-      writeStoredJSON('storyMatchStudent', studentInfo);
-
-      setIsRegistered(true);
-    }
-  };
-
-  // ============================================================
-  // 生徒情報変更
-  // ============================================================
-
-  const handleEditInfo = () => {
-    const pw = prompt(
-      '先生のパスワードを入力してください（情報の書き換え）:'
-    );
-
-    if (pw === '3939') {
-      setIsRegistered(false);
-    } else {
-      alert('パスワードが違います。');
-    }
-  };
-
-  // ============================================================
-  // Unit変更
-  // ============================================================
-
-  const handleUnitChange = (unitNum) => {
-    setCurrentUnit(unitNum);
-
-    setReadingSceneIndex(0);
-
-    resetGameState();
-
-    setView('mode-select');
-  };
-
-  // ============================================================
-  // ゲーム状態リセット
-  // ============================================================
-
-  const resetGameState = () => {
-    gameClearRecordedRef.current = false;
-    puzzleLogSavedRef.current = false;
-    setIsStarted(false);
-
-    setIsCleared(false);
-
+  const reset = () => {
+    setAttempt((x) => x + 1);
+    setCleared(false);
+    setMistakes(0);
     setFinalTime(null);
-
-    setMistakeCount(0);
-
-    setRetryCount(
-      prev => prev + 1
-    );
-
-    setPenaltySeconds(0);
-
-    setReadingSceneIndex(0);
-
-    if (
-      'speechSynthesis' in window
-    ) {
-      window.speechSynthesis.cancel();
-    }
+    startedAt.current = null;
+    penalty.current = 0;
+    saved.current = false;
   };
-
-  // ============================================================
-  // Hint penalty
-  // ============================================================
-
-  const handleAddPenalty = (seconds) => {
-    setPenaltySeconds(
-      prev => prev + seconds
-    );
+  const start = () => {
+    reset();
+    setView("game");
   };
-
-  // ============================================================
-  // Reading Start
-  // ============================================================
-
-  const startReading = () => {
-    resetGameState();
-
-    setReadingSceneIndex(0);
-
-    setView('game');
+  const finish = (score) => {
+    if (saved.current) return;
+    saved.current = true;
+    setCleared(true);
+    if (mode === "puzzle") {
+      const time =
+        Math.round(
+          ((Date.now() - (startedAt.current ?? Date.now())) / 1000 +
+            penalty.current) *
+            10,
+        ) / 10;
+      setFinalTime(time);
+      save(mode, time, { level });
+    } else
+      save(mode, score, {
+        count: count === "ALL" ? total : Math.min(total, Number(count)),
+      });
   };
-
-  // ============================================================
-  // Puzzle Start
-  // ============================================================
-
-  const startPuzzle = (selectedLevel) => {
-    setLevel(selectedLevel);
-
-    resetGameState();
-
-    setView('game');
+  const back = () => {
+    window.speechSynthesis?.cancel();
+    reset();
+    setView("dashboard");
   };
-
-  // ============================================================
-  // Random / Listening Start
-  // ============================================================
-
-  const startQuiz = (count) => {
-    setQCount(
-      count === 'ALL'
-        ? 12
-        : count
-    );
-
-    resetGameState();
-
-    setIsStarted(true);
-
-    setView('game');
+  const register = (e) => {
+    e.preventDefault();
+    const next = {
+      class: draft.class.trim(),
+      number: draft.number.trim(),
+      name: draft.name.trim(),
+    };
+    if (!next.class || !next.number || !next.name) return;
+    setStudent(next);
+    setDraft(next);
+    setProgress(loadProgress(next));
+    setRegistered(true);
+    setStorageError(!writeStoredJSON("storyMatchStudent", next));
+    setView("dashboard");
   };
-
-  // ============================================================
-  // Quit
-  // ============================================================
-
-  const handleQuit = () => {
-    setView('mode-select');
-
-    setReadingSceneIndex(0);
-
-    resetGameState();
-  };
-
-  // ============================================================
-  // 未登録
-  // ============================================================
-
-  if (!isRegistered) {
+  if (!registered)
     return (
-      <div
-        style={{
-          height: '100dvh',
-          minHeight: '100dvh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: '#f0f8ff'
-        }}
-      >
-        <form
-          onSubmit={handleRegister}
-          style={{
-            backgroundColor: '#fff',
-            padding: '40px',
-            borderRadius: '30px',
-            boxShadow:
-              '0 10px 25px rgba(0,0,0,0.1)',
-            width: '400px',
-            maxWidth: '90vw',
-            boxSizing: 'border-box'
-          }}
-        >
-          <h2
-            style={{
-              color: '#333',
-              marginBottom: '30px',
-              fontSize: '1.8rem'
-            }}
-          >
-            🎓 Student Registration
-          </h2>
-
-          <div
-            style={{
-              marginBottom: '20px',
-              textAlign: 'left'
-            }}
-          >
-            <label
-              style={{
-                display: 'block',
-                fontWeight: 'bold',
-                marginBottom: '8px',
-                color: '#555'
-              }}
-            >
-              クラス
+      <main className="registration">
+        <form onSubmit={register}>
+          <span className="eyebrow">TREASURE HUNT</span>
+          <h1>🎓 Student Registration</h1>
+          {[
+            ["class", "クラス"],
+            ["number", "番号"],
+            ["name", "氏名"],
+          ].map(([key, label]) => (
+            <label key={key}>
+              {label}
+              <input
+                required
+                maxLength={60}
+                type={key === "number" ? "number" : "text"}
+                min={key === "number" ? 1 : undefined}
+                value={draft[key]}
+                onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+              />
             </label>
-
-            <input
-              type="text"
-              required
-              value={studentInfo.class}
-              onChange={(e) =>
-                setStudentInfo({
-                  ...studentInfo,
-                  class: e.target.value
-                })
-              }
-              style={{
-                width: '100%',
-                padding: '15px',
-                borderRadius: '12px',
-                border: '2px solid #ddd',
-                boxSizing: 'border-box',
-                fontSize: '1.1rem'
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              marginBottom: '20px',
-              textAlign: 'left'
-            }}
-          >
-            <label
-              style={{
-                display: 'block',
-                fontWeight: 'bold',
-                marginBottom: '8px',
-                color: '#555'
-              }}
-            >
-              番号
-            </label>
-
-            <input
-              type="number"
-              required
-              value={studentInfo.number}
-              onChange={(e) =>
-                setStudentInfo({
-                  ...studentInfo,
-                  number: e.target.value
-                })
-              }
-              style={{
-                width: '100%',
-                padding: '15px',
-                borderRadius: '12px',
-                border: '2px solid #ddd',
-                boxSizing: 'border-box',
-                fontSize: '1.1rem'
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              marginBottom: '30px',
-              textAlign: 'left'
-            }}
-          >
-            <label
-              style={{
-                display: 'block',
-                fontWeight: 'bold',
-                marginBottom: '8px',
-                color: '#555'
-              }}
-            >
-              氏名
-            </label>
-
-            <input
-              type="text"
-              required
-              value={studentInfo.name}
-              onChange={(e) =>
-                setStudentInfo({
-                  ...studentInfo,
-                  name: e.target.value
-                })
-              }
-              style={{
-                width: '100%',
-                padding: '15px',
-                borderRadius: '12px',
-                border: '2px solid #ddd',
-                boxSizing: 'border-box',
-                fontSize: '1.1rem'
-              }}
-            />
-          </div>
-
-          <button
-            type="submit"
-            style={{
-              width: '100%',
-              padding: '15px',
-              backgroundColor: '#6c5ce7',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '15px',
-              fontSize: '1.2rem',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              boxShadow:
-                '0 4px 6px rgba(0,0,0,0.1)'
-            }}
-          >
-            Start Learning
-          </button>
+          ))}
+          <button className="primary">Start Learning</button>
         </form>
-      </div>
+      </main>
     );
-  }
-
-  // ============================================================
-  // MAIN APP
-  // ============================================================
-
+  const metric = (id) => {
+    if (id === "reading")
+      return (
+        <>
+          <strong>
+            {passed}
+            <small> / {total} Scenes</small>
+          </strong>
+          <span>Accuracy 80%以上でクリア</span>
+        </>
+      );
+    if (id === "puzzle") {
+      const records = Object.entries(record.puzzle || {});
+      return (
+        <>
+          <strong>
+            {records.length
+              ? Math.min(...records.map(([, r]) => r.best)) + " 秒"
+              : "— 秒"}
+          </strong>
+          <span>
+            {records.length
+              ? records.map(([l, r]) => `L${l}: ${r.best}秒`).join(" · ")
+              : "ベストタイムを記録"}
+          </span>
+        </>
+      );
+    }
+    const r = record[id];
+    return (
+      <>
+        <strong>
+          {r
+            ? (r.bestByCount?.[total] ??
+                r.bestByCount?.[r.count] ??
+                r.legacyBest ??
+                0) + " pts"
+            : "— pts"}
+        </strong>
+        <span>
+          {r
+            ? r.count
+              ? `${r.bestByCount?.[total] !== undefined ? total : r.count}問のベストスコア`
+              : "以前のスコア（問題数不明）"
+            : "スコアを記録"}{" "}
+          · 全{total}問でクリア
+        </span>
+      </>
+    );
+  };
   return (
-    <div
-      style={{
-        textAlign: 'center',
-        backgroundColor: '#f0f8ff',
-
-        // ★iPad Safari対策
-        height: '100dvh',
-        minHeight: '100dvh',
-
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      }}
-    >
-      {/* ========================================================
-          UNIT BAR
-      ======================================================== */}
-
-      <div
-        style={{
-          display: 'flex',
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          padding: '10px 15px',
-          gap: '12px',
-          backgroundColor: '#fff',
-          boxShadow:
-            '0 2px 5px rgba(0,0,0,0.1)',
-          flexShrink: 0
-        }}
-      >
-        {Array.from({
-          length: 15
-        }).map((_, i) => (
-          <div
-            key={i}
-            onClick={() =>
-              handleUnitChange(i + 1)
-            }
-            style={{
-              backgroundColor:
-                pastelColors[i],
-
-              padding: '5px',
-
-              borderRadius: '12px',
-
-              cursor: 'pointer',
-
-              boxShadow:
-                currentUnit === i + 1
-                  ? '0 4px 8px rgba(0,0,0,0.3)'
-                  : '0 2px 4px rgba(0,0,0,0.1)',
-
-              transform:
-                currentUnit === i + 1
-                  ? 'scale(1.05)'
-                  : 'scale(1)',
-
-              transition:
-                'all 0.2s',
-
-              flexShrink: 0
-            }}
-          >
-            <div
-              style={{
-                border:
-                  '2px dashed white',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                fontWeight: 'bold',
-                color: '#555'
-              }}
-            >
-              Unit {i + 1}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ========================================================
-          DATAあり
-      ======================================================== */}
-
-      {hasData ? (
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}
-        >
-          {/* ====================================================
-              MODE SELECT
-          ==================================================== */}
-
-          {view === 'mode-select' && (
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                gap: '30px',
-                alignItems: 'center',
-                padding: '20px',
-                position: 'relative'
-              }}
-            >
-              {/* Student Profile */}
-
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '20px',
-                  left: '30px',
-                  textAlign: 'left',
-                  backgroundColor: '#fff',
-                  padding: '15px 25px',
-                  borderRadius: '20px',
-                  border: '3px solid #eee',
-                  boxShadow:
-                    '0 4px 10px rgba(0,0,0,0.05)'
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '0.9rem',
-                    color: '#888',
-                    marginBottom: '5px'
-                  }}
-                >
-                  Student Profile
-                </div>
-
-                <div
-                  style={{
-                    fontWeight: 'bold',
-                    fontSize: '1.2rem',
-                    color: '#333'
-                  }}
-                >
-                  {studentInfo.class}
-                  {' - '}
-                  {studentInfo.number}番
-                  {' - '}
-                  {studentInfo.name}
-                </div>
-
-                <button
-                  onClick={handleEditInfo}
-                  style={{
-                    border: 'none',
-                    background: 'none',
-                    color: '#6c5ce7',
-                    textDecoration: 'underline',
-                    padding: 0,
-                    marginTop: '5px',
-                    fontSize: '0.9rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  情報を変更する
-                </button>
-              </div>
-
-              {/* History */}
-
-              <button
-                onClick={() =>
-                  setView('history')
-                }
-                style={{
-                  position: 'absolute',
-                  top: '20px',
-                  right: '30px',
-                  background: '#fff',
-                  border:
-                    '4px solid #6c5ce7',
-                  borderRadius: '50%',
-                  width: '80px',
-                  height: '80px',
-                  fontSize: '2.5rem',
-                  cursor: 'pointer',
-                  boxShadow:
-                    '0 4px 15px rgba(108,92,231,0.3)',
-                  transition:
-                    'transform 0.2s'
-                }}
-                onMouseOver={(e) =>
-                  e.currentTarget.style.transform =
-                    'scale(1.1)'
-                }
-                onMouseOut={(e) =>
-                  e.currentTarget.style.transform =
-                    'scale(1)'
-                }
-                title="学習の記録を見る"
-              >
-                📊
-              </button>
-
-              <h2
-                style={{
-                  fontSize: '2.5rem',
-                  color: '#555',
-                  marginBottom: '20px'
-                }}
-              >
-                Select Game Mode - Unit {currentUnit}
-              </h2>
-
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '30px',
-                  flexWrap: 'wrap',
-                  justifyContent: 'center'
-                }}
-              >
-                {/* Reading */}
-
-                <div
-                  onClick={() => {
-                    setGameMode('reading');
-                    startReading();
-                  }}
-                  className="mode-card"
-                  style={{
-                    border:
-                      '5px solid #4CAF50'
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '4.5rem',
-                      marginBottom: '10px'
-                    }}
-                  >
-                    📖
-                  </div>
-
-                  <h3
-                    style={{
-                      color: '#4CAF50',
-                      fontSize: '1.6rem',
-                      margin: '15px 0'
-                    }}
-                  >
-                    じっくり学習
-                  </h3>
-
-                  <p
-                    style={{
-                      color: '#666',
-                      fontSize: '1rem',
-                      lineHeight: '1.4'
-                    }}
-                  >
-                    絵本のように
-                    <br />
-                    ストーリーを読む
-                  </p>
-                </div>
-
-                {/* Puzzle */}
-
-                <div
-                  onClick={() => {
-                    setGameMode('puzzle');
-                    setView(
-                      'settings-select'
-                    );
-                  }}
-                  className="mode-card"
-                  style={{
-                    border:
-                      '5px solid #FF6B6B'
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '4.5rem',
-                      marginBottom: '10px'
-                    }}
-                  >
-                    🧩
-                  </div>
-
-                  <h3
-                    style={{
-                      color: '#FF6B6B',
-                      fontSize: '1.6rem',
-                      margin: '15px 0'
-                    }}
-                  >
-                    パズルモード
-                  </h3>
-
-                  <p
-                    style={{
-                      color: '#666',
-                      fontSize: '1rem',
-                      lineHeight: '1.4'
-                    }}
-                  >
-                    空欄に画像を当てはめ
-                    <br />
-                    物語を完成させる
-                  </p>
-                </div>
-
-                {/* Random */}
-
-                <div
-                  onClick={() => {
-                    setGameMode('random');
-                    setView(
-                      'settings-select'
-                    );
-                  }}
-                  className="mode-card"
-                  style={{
-                    border:
-                      '5px solid #4ECDC4'
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '4.5rem',
-                      marginBottom: '10px'
-                    }}
-                  >
-                    ⚡
-                  </div>
-
-                  <h3
-                    style={{
-                      color: '#4ECDC4',
-                      fontSize: '1.6rem',
-                      margin: '15px 0'
-                    }}
-                  >
-                    ランダムモード
-                  </h3>
-
-                  <p
-                    style={{
-                      color: '#666',
-                      fontSize: '1rem',
-                      lineHeight: '1.4'
-                    }}
-                  >
-                    英文からイラストを
-                    <br />
-                    素早く見極める
-                  </p>
-                </div>
-
-                {/* Listening */}
-
-                <div
-                  onClick={() => {
-                    setGameMode(
-                      'listening'
-                    );
-
-                    setView(
-                      'settings-select'
-                    );
-                  }}
-                  className="mode-card"
-                  style={{
-                    border:
-                      '5px solid #9C27B0'
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '4.5rem',
-                      marginBottom: '10px'
-                    }}
-                  >
-                    🎧
-                  </div>
-
-                  <h3
-                    style={{
-                      color: '#9C27B0',
-                      fontSize: '1.6rem',
-                      margin: '15px 0'
-                    }}
-                  >
-                    リスニング
-                  </h3>
-
-                  <p
-                    style={{
-                      color: '#666',
-                      fontSize: '1rem',
-                      lineHeight: '1.4'
-                    }}
-                  >
-                    流れる音声を聞いて
-                    <br />
-                    正しい画像を選ぶ
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ====================================================
-              HISTORY
-          ==================================================== */}
-
-          {view === 'history' && (
-            <HistoryBoard
-              history={history}
-              onBack={() =>
-                setView(
-                  'mode-select'
-                )
-              }
-            />
-          )}
-
-          {/* ====================================================
-              PUZZLE SETTINGS
-          ==================================================== */}
-
-          {view === 'settings-select' &&
-            gameMode === 'puzzle' && (
-              <div
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  gap: '30px',
-                  alignItems: 'center'
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: '2.5rem',
-                    color: '#FF6B6B'
-                  }}
-                >
-                  Select Puzzle Level
-                </h2>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '30px'
-                  }}
-                >
-                  <button
-                    onClick={() =>
-                      startPuzzle(1)
-                    }
-                    className="level-btn"
-                    style={{
-                      backgroundColor:
-                        '#FFD700'
-                    }}
-                  >
-                    Level 1
-                    <br />
-                    <span
-                      style={{
-                        fontSize: '1rem'
-                      }}
-                    >
-                      (6枚ヒント)
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      startPuzzle(2)
-                    }
-                    className="level-btn"
-                    style={{
-                      backgroundColor:
-                        '#FF8C00'
-                    }}
-                  >
-                    Level 2
-                    <br />
-                    <span
-                      style={{
-                        fontSize: '1rem'
-                      }}
-                    >
-                      (3枚ヒント)
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      startPuzzle(3)
-                    }
-                    className="level-btn"
-                    style={{
-                      backgroundColor:
-                        '#FF4500'
-                    }}
-                  >
-                    Level 3
-                    <br />
-                    <span
-                      style={{
-                        fontSize: '1rem'
-                      }}
-                    >
-                      (すべて空欄)
-                    </span>
-                  </button>
-                </div>
-
-                <button
-                  onClick={() =>
-                    setView(
-                      'mode-select'
-                    )
-                  }
-                  style={{
-                    marginTop: '20px',
-                    background: 'none',
-                    border: 'none',
-                    color: '#888',
-                    cursor: 'pointer',
-                    textDecoration:
-                      'underline',
-                    fontSize: '1.2rem'
-                  }}
-                >
-                  ← もどる
-                </button>
-              </div>
-            )}
-
-          {/* ====================================================
-              RANDOM / LISTENING SETTINGS
-          ==================================================== */}
-
-          {view === 'settings-select' &&
-            (
-              gameMode === 'random' ||
-              gameMode === 'listening'
-            ) && (
-              <div
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  gap: '30px',
-                  alignItems: 'center'
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: '2.5rem',
-                    color:
-                      gameMode === 'random'
-                        ? '#4ECDC4'
-                        : '#9C27B0'
-                  }}
-                >
-                  Select Question Count
-                </h2>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '30px'
-                  }}
-                >
-                  <button
-                    onClick={() =>
-                      startQuiz(5)
-                    }
-                    className="count-btn"
-                    style={{
-                      backgroundColor:
-                        gameMode ===
-                        'random'
-                          ? '#4ECDC4'
-                          : '#9C27B0'
-                    }}
-                  >
-                    5問
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      startQuiz(8)
-                    }
-                    className="count-btn"
-                    style={{
-                      backgroundColor:
-                        gameMode ===
-                        'random'
-                          ? '#4ECDC4'
-                          : '#9C27B0'
-                    }}
-                  >
-                    8問
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      startQuiz('ALL')
-                    }
-                    className="count-btn"
-                    style={{
-                      backgroundColor:
-                        gameMode ===
-                        'random'
-                          ? '#4ECDC4'
-                          : '#9C27B0'
-                    }}
-                  >
-                    ALL
-                    <br />
-                    <span
-                      style={{
-                        fontSize: '1rem'
-                      }}
-                    >
-                      (全12問)
-                    </span>
-                  </button>
-                </div>
-
-                <button
-                  onClick={() =>
-                    setView(
-                      'mode-select'
-                    )
-                  }
-                  style={{
-                    marginTop: '20px',
-                    background: 'none',
-                    border: 'none',
-                    color: '#888',
-                    cursor: 'pointer',
-                    textDecoration:
-                      'underline',
-                    fontSize: '1.2rem'
-                  }}
-                >
-                  ← もどる
-                </button>
-              </div>
-            )}
-
-          {/* ====================================================
-              GAME
-          ==================================================== */}
-
-          {view === 'game' && (
-            <>
-              {/* =================================================
-                  GAME HEADER
-              ================================================= */}
-
-              <div
-                style={{
-                  display: 'grid',
-
-                  gridTemplateColumns:
-                    '170px 1fr 170px',
-
-                  alignItems: 'center',
-
-                  padding: '7px 20px',
-
-                  flexShrink: 0,
-
-                  minHeight: '55px',
-
-                  boxSizing: 'border-box'
-                }}
-              >
-                {/* Quit */}
-
-                <button
-                  onClick={handleQuit}
-                  style={{
-                    justifySelf: 'start',
-
-                    padding:
-                      '10px 20px',
-
-                    borderRadius:
-                      '15px',
-
-                    border: 'none',
-
-                    backgroundColor:
-                      '#ddd',
-
-                    cursor: 'pointer',
-
-                    fontWeight: 'bold',
-
-                    fontSize: '1.1rem',
-
-                    transition:
-                      'background-color 0.2s'
-                  }}
-                  onMouseOver={(e) =>
-                    e.currentTarget
-                      .style
-                      .backgroundColor =
-                        '#ccc'
-                  }
-                  onMouseOut={(e) =>
-                    e.currentTarget
-                      .style
-                      .backgroundColor =
-                        '#ddd'
-                  }
-                >
-                  🏠 Quit
-                </button>
-
-                {/* Unit + Scene */}
-
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent:
-                      'center',
-                    gap: '16px',
-                    minWidth: 0
-                  }}
-                >
-                  <h1
-                    style={{
-                      margin: 0,
-
-                      fontSize: '1.8rem',
-
-                      fontFamily:
-                        '"Comic Sans MS", sans-serif',
-
-                      background:
-                        'linear-gradient(45deg, #FF6B6B, #4ECDC4)',
-
-                      WebkitBackgroundClip:
-                        'text',
-
-                      WebkitTextFillColor:
-                        'transparent',
-
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    Unit {currentUnit}
-
-                    {gameMode ===
-                    'puzzle'
-                      ? ` - L${level}`
-                      : ''}
-                  </h1>
-
-                  {/* Reading Scene */}
-
-                  {gameMode ===
-                    'reading' && (
-                    <div
-                      style={{
-                        backgroundColor:
-                          '#fff',
-
-                        padding:
-                          '6px 18px',
-
-                        borderRadius:
-                          '22px',
-
-                        fontSize:
-                          '1.12rem',
-
-                        fontWeight:
-                          'bold',
-
-                        color: '#666',
-
-                        whiteSpace:
-                          'nowrap',
-
-                        boxShadow:
-                          '0 2px 7px rgba(0,0,0,0.12)',
-
-                        border:
-                          '1px solid #eee'
-                      }}
-                    >
-                      Scene{' '}
-                      {readingSceneIndex + 1}
-                      {' / '}
-                      {currentStoryData.length}
-                    </div>
-                  )}
-                </div>
-
-                {/* Timer */}
-
-                <div
-                  style={{
-                    justifySelf: 'end',
-                    minWidth: '160px',
-                    display: 'flex',
-                    justifyContent:
-                      'flex-end'
-                  }}
-                >
-                  {gameMode ===
-                  'puzzle' ? (
-                    <Timer
-                      key={
-                        `timer-${retryCount}`
-                      }
-                      isStarted={
-                        isStarted
-                      }
-                      isCleared={
-                        isCleared
-                      }
-                      setFinalTime={
-                        setFinalTime
-                      }
-                      penaltySeconds={
-                        penaltySeconds
-                      }
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: '160px'
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* =================================================
-                  READING
-              ================================================= */}
-
-              {gameMode ===
-                'reading' && (
-                <StoryModeBoard
-                  storyData={
-                    currentStoryData
-                  }
-                  unit={
-                    currentUnit
-                  }
-                  onSceneChange={
-                    setReadingSceneIndex
-                  }
-                />
-              )}
-
-              {/* =================================================
-                  PUZZLE
-              ================================================= */}
-
-              {gameMode ===
-                'puzzle' && (
-                <MatchBoard
-                  storyData={
-                    currentStoryData
-                  }
-                  onGameStart={() =>
-                    setIsStarted(true)
-                  }
-                  onGameClear={() =>
-                    handleGameClear({})
-                  }
-                  onMistake={() =>
-                    setMistakeCount(
-                      prev => prev + 1
-                    )
-                  }
-                  onRetry={
-                    resetGameState
-                  }
-                  mistakeCount={
-                    mistakeCount
-                  }
-                  unit={
-                    currentUnit
-                  }
-                  isCleared={
-                    isCleared
-                  }
-                  finalTime={
-                    finalTime
-                  }
-                  bestTime={
-                    bestTimes[
-                      `${currentUnit}-L${level}`
-                    ]
-                  }
-                  retryCount={
-                    retryCount
-                  }
-                  onHintUsed={
-                    handleAddPenalty
-                  }
-                  level={
-                    level
-                  }
-                  studentInfo={
-                    studentInfo
-                  }
-                />
-              )}
-
-              {/* =================================================
-                  RANDOM
-              ================================================= */}
-
-              {gameMode ===
-                'random' && (
-                <RandomModeBoard
-                  storyData={
-                    currentStoryData
-                  }
-                  unit={
-                    currentUnit
-                  }
-                  retryCount={
-                    retryCount
-                  }
-                  onRetry={
-                    resetGameState
-                  }
-                  qCount={
-                    qCount
-                  }
-                  onGameClear={(score) =>
-                    handleGameClear({
-                      result: score
-                    })
-                  }
-                  studentInfo={
-                    studentInfo
-                  }
-                />
-              )}
-
-              {/* =================================================
-                  LISTENING
-              ================================================= */}
-
-              {gameMode ===
-                'listening' && (
-                <ListeningModeBoard
-                  storyData={
-                    currentStoryData
-                  }
-                  unit={
-                    currentUnit
-                  }
-                  retryCount={
-                    retryCount
-                  }
-                  onRetry={
-                    resetGameState
-                  }
-                  qCount={
-                    qCount
-                  }
-                  onGameClear={(score) =>
-                    handleGameClear({
-                      result: score
-                    })
-                  }
-                  studentInfo={
-                    studentInfo
-                  }
-                />
-              )}
-            </>
-          )}
+    <main className="app-shell">
+      <header className="app-header">
+        <div>
+          <span className="eyebrow">TREASURE HUNT</span>
+          <h1>
+            Story Match <span>Learning Progress</span>
+          </h1>
         </div>
-      ) : (
-        // ========================================================
-        // 本当にデータがないUnitだけ
-        // ========================================================
-
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexDirection: 'column',
-            color: '#888'
+        <div className="student-profile">
+          <strong>{student.name}</strong>
+          <span>
+            {student.class} · {student.number}番
+          </span>
+        </div>
+        <button
+          className="subtle"
+          onClick={() => {
+            const pw = window.prompt(
+              "先生のパスワードを入力してください（情報の書き換え）:",
+            );
+            if (pw === "3939") {
+              setDraft(student);
+              setRegistered(false);
+            }
           }}
         >
-          <div
-            style={{
-              fontSize: '5rem',
-              marginBottom: '20px'
-            }}
-          >
-            🚧
-          </div>
-
-          <h2
-            style={{
-              fontSize: '2rem'
-            }}
-          >
-            Unit {currentUnit} is Coming Soon!
-          </h2>
-
-          <p
-            style={{
-              fontSize: '1.2rem'
-            }}
-          >
-            教材データがまだ登録されていません。
-          </p>
+          情報を変更する
+        </button>
+      </header>
+      {storageError && (
+        <div role="alert" className="storage-error">
+          端末に保存できません。画面を閉じる前にスクリーンショットを保存してください。
         </div>
       )}
-
-      {/* ========================================================
-          GLOBAL STYLE
-      ======================================================== */}
-
-      <style>{`
-
-        .mode-card {
-          cursor: pointer;
-          padding: 40px 20px;
-          background-color: #fff;
-          border-radius: 25px;
-
-          box-shadow:
-            0 10px 20px
-            rgba(0,0,0,0.1);
-
-          width: 230px;
-
-          box-sizing: border-box;
-
-          transition:
-            transform 0.2s,
-            box-shadow 0.2s;
-        }
-
-        .mode-card:hover {
-          transform:
-            translateY(-10px);
-
-          box-shadow:
-            0 15px 30px
-            rgba(0,0,0,0.2);
-        }
-
-        .level-btn,
-        .count-btn {
-          padding:
-            20px 35px;
-
-          font-size:
-            1.5rem;
-
-          font-weight:
-            bold;
-
-          color: #fff;
-
-          border: none;
-
-          border-radius:
-            18px;
-
-          cursor:
-            pointer;
-
-          box-shadow:
-            0 6px 10px
-            rgba(0,0,0,0.15);
-
-          transition:
-            transform 0.2s,
-            box-shadow 0.2s;
-
-          line-height:
-            1.4;
-        }
-
-        .level-btn:hover,
-        .count-btn:hover {
-          transform:
-            scale(1.05);
-
-          box-shadow:
-            0 8px 15px
-            rgba(0,0,0,0.2);
-        }
-
-        @media (max-width: 900px) {
-
-          .mode-card {
-            width: 190px;
-
-            padding:
-              25px 15px;
-          }
-
-        }
-
-      `}</style>
-    </div>
+      {view === "dashboard" ? (
+        <section className="dashboard">
+          <nav className="unit-grid" aria-label="ユニットごとの学習進捗">
+            {units.map((n) => {
+              const flags = completedModes(progress[n], allUnitsData[n].length);
+              return (
+                <button
+                  key={n}
+                  className={"unit-tab " + (n === unit ? "selected" : "")}
+                  aria-pressed={n === unit}
+                  onClick={() => {
+                    setUnit(n);
+                    writeStoredJSON("storyMatchLastUnit", n);
+                  }}
+                >
+                  <b>Unit {n}</b>
+                  <span className="unit-dots">
+                    {flags.map((f, i) => (
+                      <i
+                        key={i}
+                        className={f ? "done" : ""}
+                        title={modes[i][2] + (f ? " クリア" : " 未クリア")}
+                      />
+                    ))}
+                  </span>
+                  <small>{flags.filter(Boolean).length}/4</small>
+                </button>
+              );
+            })}
+          </nav>
+          <div className="dashboard-heading">
+            <div>
+              <span className="eyebrow">UNIT {unit} · 学習進捗</span>
+              <h2>Select Game Mode</h2>
+            </div>
+            <div
+              className={
+                "mission-count " + (done.every(Boolean) ? "all-clear" : "")
+              }
+            >
+              <b>{done.filter(Boolean).length} / 4</b>
+              <span>
+                {done.every(Boolean) ? "ALL MISSIONS CLEAR!" : "MISSIONS CLEAR"}
+              </span>
+            </div>
+          </div>
+          <div className="mission-cards">
+            {modes.map(([id, icon, title, a, b], i) => (
+              <button
+                key={id}
+                className={"mission-card " + id}
+                onClick={() => {
+                  setMode(id);
+                  if (id === "reading") start();
+                  else setView("settings");
+                }}
+              >
+                <div className="card-top">
+                  <span className="mode-icon">{icon}</span>
+                  <span className={"badge " + (done[i] ? "complete" : "")}>
+                    {done[i] ? "✓ CLEAR" : "CHALLENGE"}
+                  </span>
+                </div>
+                <h3>{title}</h3>
+                <p>
+                  {a}
+                  <br />
+                  {b}
+                </p>
+                <div className="mode-metric">{metric(id)}</div>
+                <div className="card-footer">
+                  <span>
+                    {id === "reading" && passed > 0 && passed < total
+                      ? "続きから学習"
+                      : "学習をはじめる"}
+                  </span>
+                  <b>→</b>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="scene-strip">
+            <span>📖 Scene</span>
+            {sceneScores(record, total).map((n, i) => (
+              <span
+                key={i}
+                className={n >= 80 ? "passed" : ""}
+                title={"Scene " + (i + 1) + ": " + n + "%"}
+              >
+                {i + 1}
+                {n >= 80 ? " ✓" : ""}
+              </span>
+            ))}
+          </div>
+          <footer className="dashboard-footer">
+            <p>
+              {done.every(Boolean)
+                ? "🎉 4つのミッションをクリア！この画面をスクリーンショットで先生に提出しましょう。"
+                : "4つのミッションをクリアしたら、この画面をスクリーンショットで先生に提出しましょう。"}
+              <small>記録はこの端末・このブラウザに保存されます。</small>
+            </p>
+            <button className="subtle" onClick={() => setView("history")}>
+              📊 学習の記録
+            </button>
+          </footer>
+        </section>
+      ) : view === "history" ? (
+        <HistoryBoard
+          history={history.filter(
+            (x) =>
+              x.student === profileKey(student) ||
+              (!x.student &&
+                readStoredJSON("storyMatchLegacyOwner", null) ===
+                  profileKey(student)),
+          )}
+          onBack={back}
+        />
+      ) : (
+        <>
+          <div className="game-toolbar">
+            <button className="subtle" onClick={back}>
+              ← 学習進捗へ
+            </button>
+            <strong>
+              Unit {unit} · {modes.find((x) => x[0] === mode)[2]}
+            </strong>
+            {mode === "puzzle" && <span>ヒント +10秒 · ミス {mistakes}回</span>}
+          </div>
+          {view === "settings" ? (
+            <section className="settings">
+              <span className="mode-icon">
+                {modes.find((x) => x[0] === mode)[1]}
+              </span>
+              <h2>
+                {mode === "puzzle" ? "Select Puzzle Level" : "Select Questions"}
+              </h2>
+              {mode === "puzzle" ? (
+                <div className="setting-options">
+                  {[1, 2, 3].map((l) => (
+                    <button
+                      aria-pressed={level === l}
+                      className={level === l ? "selected" : ""}
+                      key={l}
+                      onClick={() => setLevel(l)}
+                    >
+                      Level {l}
+                      <small>
+                        {["6枚ヒント", "3枚ヒント", "すべて空欄"][l - 1]}
+                      </small>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <p>
+                    全{total}
+                    問を終えるとミッションクリア。短い練習も記録します。
+                  </p>
+                  <div className="setting-options">
+                    {[3, 6, "ALL"].map((c) => (
+                      <button
+                        aria-pressed={count === c}
+                        className={count === c ? "selected" : ""}
+                        key={c}
+                        onClick={() => setCount(c)}
+                      >
+                        {c === "ALL" ? `全${total}問` : c + "問"}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              <button className="primary" onClick={start}>
+                START!
+              </button>
+            </section>
+          ) : (
+            <div
+              className="game-content"
+              key={unit + "-" + mode + "-" + attempt}
+            >
+              {mode === "reading" && (
+                <StoryModeBoard
+                  storyData={data}
+                  unit={unit}
+                  scores={sceneScores(record, total)}
+                  onScore={(scene, score) => save("reading", score, { scene })}
+                  onBack={back}
+                />
+              )}
+              {mode === "puzzle" && (
+                <MatchBoard
+                  storyData={data}
+                  unit={unit}
+                  level={level}
+                  retryCount={attempt}
+                  studentInfo={student}
+                  onGameStart={() => {
+                    if (startedAt.current === null)
+                      startedAt.current = Date.now();
+                  }}
+                  onGameClear={() => finish()}
+                  onMistake={() => setMistakes((x) => x + 1)}
+                  onHintUsed={(s) => {
+                    if (startedAt.current === null)
+                      startedAt.current = Date.now();
+                    penalty.current += s;
+                  }}
+                  isCleared={cleared}
+                  finalTime={finalTime}
+                  bestTime={record.puzzle?.[level]?.best}
+                  mistakeCount={mistakes}
+                  onRetry={reset}
+                />
+              )}
+              {mode === "random" && (
+                <RandomModeBoard
+                  storyData={data}
+                  unit={unit}
+                  retryCount={attempt}
+                  qCount={count}
+                  onGameClear={finish}
+                  onRetry={reset}
+                  studentInfo={student}
+                />
+              )}
+              {mode === "listening" && (
+                <ListeningModeBoard
+                  storyData={data}
+                  unit={unit}
+                  retryCount={attempt}
+                  qCount={count}
+                  onGameClear={finish}
+                  onRetry={reset}
+                  studentInfo={student}
+                />
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </main>
   );
 }
-
 export default App;
