@@ -1,27 +1,6 @@
-import React, { useState, useEffect } from 'react';
-
-const playSound = (type) => {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  if (type === 'correct') {
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'sine'; osc.frequency.setValueAtTime(880, ctx.currentTime);
-    gain.gain.setValueAtTime(0, ctx.currentTime); gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05);
-    osc.start(); osc.stop(ctx.currentTime + 0.3);
-  } else if (type === 'wrong') {
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'triangle'; osc.frequency.setValueAtTime(150, ctx.currentTime);
-    gain.gain.setValueAtTime(0, ctx.currentTime); gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-    osc.start(); osc.stop(ctx.currentTime + 0.3);
-  } else if (type === 'fanfare') {
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'square'; [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => { osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.15); });
-    gain.gain.setValueAtTime(0, ctx.currentTime); gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.05);
-    osc.start(); osc.stop(ctx.currentTime + 1.2);
-  }
-};
+import React, { useState, useEffect, useRef } from 'react';
+import { makeQuestions, makeChoices } from '../utils/game';
+import { playSound } from '../utils/sound';
 
 const RandomModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGameClear, studentInfo }) => {
   const [questions, setQuestions] = useState([]);
@@ -31,20 +10,29 @@ const RandomModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGameC
   const [isCleared, setIsCleared] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const timersRef = useRef([]);
+
+  useEffect(() => () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+  }, []);
+
+  const schedule = (callback, delay) => {
+    timersRef.current.push(setTimeout(callback, delay));
+  };
 
   useEffect(() => {
     if (!storyData) return;
-    const allIndices = [...Array(12).keys()].sort(() => Math.random() - 0.5);
-    const shuffled = allIndices.slice(0, qCount === 'ALL' ? 12 : qCount);
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+    const shuffled = makeQuestions(storyData.length, qCount);
     setQuestions(shuffled);
     setCurrentIndex(0); setScore(0); setIsCleared(false);
     generateChoices(shuffled[0]);
   }, [unit, retryCount, storyData, qCount]);
 
   const generateChoices = (correctId) => {
-    const wrongPool = [...Array(12).keys()].filter(id => id !== correctId);
-    const wrongIds = wrongPool.sort(() => Math.random() - 0.5).slice(0, 2);
-    setChoices([correctId, ...wrongIds].sort(() => Math.random() - 0.5));
+    setChoices(makeChoices(storyData.length, correctId));
     setQuestionStartTime(Date.now()); setFeedback(null);
   };
 
@@ -55,7 +43,7 @@ const RandomModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGameC
       setFeedback({ status: 'correct', id });
       const points = Math.max(10, Math.floor(100 - ((Date.now() - questionStartTime) / 1000) * 12));
       setScore(prev => prev + points);
-      setTimeout(() => {
+      schedule(() => {
         if (currentIndex + 1 < questions.length) {
           setCurrentIndex(prev => prev + 1);
           generateChoices(questions[currentIndex + 1]);
@@ -69,7 +57,7 @@ const RandomModeBoard = ({ storyData, unit, retryCount, onRetry, qCount, onGameC
       playSound('wrong');
       setFeedback({ status: 'wrong', id });
       setScore(prev => Math.max(0, prev - 20));
-      setTimeout(() => setFeedback(null), 500);
+      schedule(() => setFeedback(null), 500);
     }
   };
 
