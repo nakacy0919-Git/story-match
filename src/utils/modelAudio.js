@@ -18,6 +18,7 @@ export function createModelAudioPlayer(win = window) {
   let playbackId = 0;
   let audio = null;
   let utterance = null;
+  const failedUrls = new Set();
   const stop = () => {
     playbackId += 1;
     if (audio) {
@@ -81,12 +82,13 @@ export function createModelAudioPlayer(win = window) {
       }
     };
 
-    if (!hasModelAudio(unit, index)) {
+    const url = modelAudioUrl(unit, index);
+    if (!hasModelAudio(unit, index) || failedUrls.has(url)) {
       speak();
       return;
     }
     try {
-      const a = new win.Audio(modelAudioUrl(unit, index));
+      const a = new win.Audio(url);
       audio = a;
       a.preload = "auto";
       a.playbackRate = rate;
@@ -94,6 +96,7 @@ export function createModelAudioPlayer(win = window) {
       const fallback = () => {
         if (!current() || triedFallback || audio !== a) return;
         triedFallback = true;
+        failedUrls.add(url);
         a.onplaying = null;
         a.onended = null;
         a.onerror = null;
