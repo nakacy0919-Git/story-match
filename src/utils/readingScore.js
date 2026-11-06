@@ -36,7 +36,6 @@ const foreignPhrases = [
   "xin chào", "xin chao", "annyeong", "sawasdee",
 ];
 const IGNORE_KEY = "qzxomittedwordqzx";
-const latinLetter = /[a-z]/i;
 const unicodeWord = /[\p{L}\p{M}\p{N}]/u;
 
 function escapeRegex(text) {
