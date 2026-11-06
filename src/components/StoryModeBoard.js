@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { score, createFeedback } from "../utils/readingScore";
 import ReadingCelebration from "./ReadingCelebration";
 import { useReadingSpeech } from "../utils/useReadingSpeech";
+import { createModelAudioPlayer, PLAYBACK_RATES } from "../utils/modelAudio";
 
 function Scene({
   item,
@@ -19,11 +20,12 @@ function Scene({
   const [result, setResult] = useState(null),
     [spoken, setSpoken] = useState("");
   const [audioError, setAudioError] = useState("");
+  const [playbackRate, setPlaybackRate] = useState(0.85);
+  const playerRef = useRef(null);
+  if (!playerRef.current) playerRef.current = createModelAudioPlayer();
   const [celebration, setCelebration] = useState(0);
   const celebrationTimer = useRef(null);
-  const audio = useRef(null),
-    feedback = useRef(null),
-    utterance = useRef(null);
+  const feedback = useRef(null);
   const mic = useReadingSpeech(
     item.en,
     (percent, text) => {
@@ -42,14 +44,7 @@ function Scene({
     `${unit}:${index}`,
     threshold,
   );
-  const stopAudio = () => {
-    if (audio.current) {
-      audio.current.onerror = null;
-      audio.current.pause();
-      audio.current = null;
-    }
-    window.speechSynthesis?.cancel();
-  };
+  const stopAudio = () => playerRef.current.stop();
   useEffect(
     () => () => {
       stopAudio();
@@ -66,38 +61,14 @@ function Scene({
     stopAudio();
   }, [unit, index]);
   const play = () => {
-    stopAudio();
     setAudioError("");
-    const fallback = () => {
-      const synth = window.speechSynthesis;
-      if (!synth || !window.SpeechSynthesisUtterance) {
-        setAudioError(
-          "音声を再生できません。端末の音量とブラウザ設定を確認してください。",
-        );
-        return;
-      }
-      const u = new window.SpeechSynthesisUtterance(item.en);
-      u.lang = "en-US";
-      u.rate = 0.85;
-      const voices = synth.getVoices();
-      u.voice = voices.find((v) => v.lang === "en-US") || null;
-      u.onerror = () =>
-        setAudioError("音声を再生できません。もう一度お手本を押してください。");
-      utterance.current = u;
-      synth.speak(u);
-    };
-    const a = new Audio(
-      `${process.env.PUBLIC_URL}/audio/unit${unit}/${index + 1}.mp3`,
-    );
-    audio.current = a;
-    let fellBack = false;
-    const once = () => {
-      if (fellBack || audio.current !== a) return;
-      fellBack = true;
-      fallback();
-    };
-    a.onerror = once;
-    a.play().catch(once);
+    playerRef.current.play({
+      unit,
+      index,
+      text: item.en,
+      rate: playbackRate,
+      onError: setAudioError,
+    });
   };
   const tapFeedback = () => {
     if (!feedback.current) feedback.current = createFeedback(window);
@@ -128,13 +99,31 @@ function Scene({
           />
         </div>
         <div className="reading-text">
-          <button
-            className="subtle"
-            disabled={mic.phase !== "idle"}
-            onClick={play}
-          >
-            🔊 お手本を聞く
-          </button>
+          <div className="reading-audio-toolbar">
+            <button
+              className="subtle"
+              disabled={mic.phase !== "idle"}
+              onClick={play}
+            >
+              🔊 お手本を聞く
+            </button>
+            <label className="audio-speed-control">
+              再生速度
+              <select
+                aria-label="お手本の再生速度"
+                value={playbackRate}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  setPlaybackRate(next);
+                  playerRef.current.setRate(next);
+                }}
+              >
+                {PLAYBACK_RATES.map((rate) => (
+                  <option key={rate} value={rate}>{rate.toFixed(2).replace(/0$/, "")}×</option>
+                ))}
+              </select>
+            </label>
+          </div>
           <p className="reading-english">{item.en}</p>
           <p className="reading-japanese">{item.ja}</p>
         </div>
