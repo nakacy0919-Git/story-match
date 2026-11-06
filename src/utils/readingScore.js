@@ -63,7 +63,11 @@ function protectedSpans(sentence) {
       readingNames.includes(phrase) ? "gu" : "giu",
     );
     for (const found of source.matchAll(pattern)) {
-      const start = found.index, end = start + found[0].length;
+      const start = found.index;
+      let end = start + found[0].length;
+      // Proper-name possessives (Celina’s, Terry's) form one optional span.
+      if (readingNames.includes(phrase) && /^['’]s(?![\\p{L}\\p{M}])/u.test(source.slice(end)))
+        end += 2;
       if (
         !unicodeWord.test(source[start - 1] || "") &&
         !unicodeWord.test(source[end] || "")
@@ -91,6 +95,7 @@ function protectedSpans(sentence) {
       .replace(/[\s"'“”‘’()[\]{}]+$/gu, "");
     return !preceding || /[.!?:]$/.test(preceding);
   };
+  const ordinaryCapitalizedWords = new Set(["English"]);
   const starterWords = new Set([
     "a", "an", "the", "i", "we", "you", "he", "she", "it",
     "they", "in", "on", "at", "to", "from", "for", "of",
@@ -110,7 +115,7 @@ function protectedSpans(sentence) {
       addIgnoredSpan(spans, start, end);
       continue;
     }
-    if (word === "I") continue;
+    if (word === "I" || ordinaryCapitalizedWords.has(word)) continue;
     const titled = isTitle(word);
     const acronym = /^[A-Z]{2,}$/.test(word);
     const internalCaps = /^[a-z]+[A-Z][A-Za-z]*$/.test(word);
