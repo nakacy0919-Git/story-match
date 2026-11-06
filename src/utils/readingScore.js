@@ -46,6 +46,9 @@ function addIgnoredSpan(spans, start, end) {
     return;
   spans.push({ start, end });
 }
+function hasNonAsciiLetter(text) {
+  return Array.from(text).some((char) => char.codePointAt(0) > 127);
+}
 function protectedSpans(sentence) {
   const source = String(sentence || "");
   const spans = [];
@@ -75,7 +78,7 @@ function protectedSpans(sentence) {
   for (const match of source.matchAll(romanization)) {
     const preceding = source.slice(0, match.index).trimEnd();
     const previousWord = preceding.match(/[\p{L}\p{M}]+$/u)?.[0] || "";
-    if (/[^\x00-\x7f]/u.test(previousWord))
+    if (hasNonAsciiLetter(previousWord))
       addIgnoredSpan(spans, match.index, match.index + match[0].length);
   }
 
@@ -103,7 +106,7 @@ function protectedSpans(sentence) {
     const letters = word.replace(/['’-]/g, "");
     // All non-ASCII words/characters are not English-only score targets.
     // This includes Han characters and accented foreign-language words.
-    if (/[^\x00-\x7f]/u.test(letters)) {
+    if (hasNonAsciiLetter(letters)) {
       addIgnoredSpan(spans, start, end);
       continue;
     }
