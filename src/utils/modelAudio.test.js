@@ -37,7 +37,7 @@ test("only checked-in model recordings are advertised", () => {
   expect(hasModelAudio(8, 11)).toBe(true);
   expect(hasModelAudio(2, 0)).toBe(false);
   expect(hasModelAudio(7, 12)).toBe(false);
-  expect(modelAudioUrl(7, 0)).toContain("/audio/unit7/1.mp3");
+  expect(modelAudioUrl(7, 0)).toContain("/audio/unit7/1.wav");
 });
 
 test("reading units without MP3 use speech synthesis immediately at the chosen speed", () => {
@@ -61,7 +61,7 @@ test("recorded Model MP3 takes priority and supports speed changes", () => {
   const player = createModelAudioPlayer(mock.win);
   player.play({ unit: 7, index: 1, text: "The light is green.", rate: 0.85, onEnd, onSource });
   const a = mock.recordings[0];
-  expect(a.src).toContain("/audio/unit7/2.mp3");
+  expect(a.src).toContain("/audio/unit7/2.wav");
   expect(a.playbackRate).toBe(0.85);
   expect(mock.synthesis.speak).not.toHaveBeenCalled();
   a.onplaying();

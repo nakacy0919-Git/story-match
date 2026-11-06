@@ -298,7 +298,7 @@ test("reading uses Unit 7 Model recordings and adjusts playback speed", () => {
     fireEvent.click(screen.getByRole("button", { name: /Unit 7/ }));
     reading();
     fireEvent.click(screen.getByRole("button", { name: "🔊 お手本を聞く" }));
-    expect(instances[0].src).toContain("/audio/unit7/1.mp3");
+    expect(instances[0].src).toContain("/audio/unit7/1.wav");
     expect(window.speechSynthesis.speak).not.toHaveBeenCalled();
     fireEvent.change(screen.getByRole("combobox", { name: "お手本の再生速度" }), {
       target: { value: "0.75" },
