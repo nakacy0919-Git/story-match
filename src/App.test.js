@@ -278,3 +278,63 @@ test("a cached administrator threshold applies to reading gates and confetti", (
   expect(screen.getByRole("button", { name: "次のシーンへ ▶" })).toBeEnabled();
   expect(screen.getByTestId("reading-confetti")).toBeInTheDocument();
 });
+
+
+test("reading uses Unit 7 Model recordings and adjusts playback speed", () => {
+  const OriginalAudio = window.Audio;
+  const instances = [];
+  window.Audio = jest.fn().mockImplementation((src) => {
+    const a = {
+      src,
+      playbackRate: 1,
+      play: jest.fn(() => Promise.resolve()),
+      pause: jest.fn(),
+    };
+    instances.push(a);
+    return a;
+  });
+  try {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /Unit 7/ }));
+    reading();
+    fireEvent.click(screen.getByRole("button", { name: "🔊 お手本を聞く" }));
+    expect(instances[0].src).toContain("/audio/unit7/1.mp3");
+    expect(window.speechSynthesis.speak).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole("combobox", { name: "お手本の再生速度" }), {
+      target: { value: "0.75" },
+    });
+    expect(instances[0].playbackRate).toBe(0.75);
+  } finally {
+    window.Audio = OriginalAudio;
+  }
+});
+
+test("listening waits until the model audio finishes before enabling answers", () => {
+  const OriginalAudio = window.Audio;
+  const instances = [];
+  window.Audio = jest.fn().mockImplementation((src) => {
+    const a = {
+      src,
+      playbackRate: 1,
+      play: jest.fn(() => Promise.resolve()),
+      pause: jest.fn(),
+    };
+    instances.push(a);
+    return a;
+  });
+  try {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /Unit 7/ }));
+    fireEvent.click(screen.getByRole("button", { name: /🎧.*リスニング/ }));
+    fireEvent.click(screen.getByRole("button", { name: "START!" }));
+    fireEvent.click(screen.getByRole("button", { name: "START!" }));
+    expect(instances).toHaveLength(1);
+    const images = screen.getAllByRole("button", { name: /選択画像/ });
+    expect(images.every((button) => button.disabled)).toBe(true);
+    act(() => instances[0].onended());
+    expect(images.every((button) => !button.disabled)).toBe(true);
+    expect(screen.getByText("音声を聞き終えました。画像を選んでください。")).toBeInTheDocument();
+  } finally {
+    window.Audio = OriginalAudio;
+  }
+});

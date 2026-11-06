@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { makeQuestions, makeChoices, deferQuestion } from "../utils/game";
 import { playSound } from "../utils/sound";
+import { createModelAudioPlayer, PLAYBACK_RATES } from "../utils/modelAudio";
 
 const ListeningModeBoard = ({
   storyData,
@@ -20,10 +21,12 @@ const ListeningModeBoard = ({
   const [isCleared, setIsCleared] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const [playbackRate, setPlaybackRate] = useState(0.85);
+  const [audioReady, setAudioReady] = useState(false);
+  const audioPlayerRef = useRef(null);
+  if (!audioPlayerRef.current) audioPlayerRef.current = createModelAudioPlayer();
 
   const timersRef = useRef([]);
-  const speechTimerRef = useRef(null);
-  const utteranceRef = useRef(null);
   const lastSpokenIndexRef = useRef(null);
   const [audioError, setAudioError] = useState(false);
 
@@ -33,23 +36,15 @@ const ListeningModeBoard = ({
   }, []);
 
   const stopSpeech = useCallback(() => {
-    clearTimeout(speechTimerRef.current);
-    speechTimerRef.current = null;
-    utteranceRef.current = null;
-    if (window.speechSynthesis) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch (error) {
-        /* no audio */
-      }
-    }
+    audioPlayerRef.current.stop();
   }, []);
 
   const generateChoices = useCallback(
     (correctId) => {
       if (correctId === undefined) return;
       setChoices(makeChoices(storyData?.length || 0, correctId));
-      setQuestionStartTime(Date.now());
+      setQuestionStartTime(null);
+      setAudioReady(false);
       setFeedback(null);
     },
     [storyData],
@@ -83,53 +78,28 @@ const ListeningModeBoard = ({
   ]);
 
   const speakText = useCallback(
-    (questionId, immediate = false) => {
+    (questionId) => {
       const item = storyData?.[questionId];
       if (!item) return;
-      stopSpeech();
-      const synth = window.speechSynthesis;
-      const Utterance = window.SpeechSynthesisUtterance;
-      if (!synth || !Utterance) {
-        setAudioError(true);
-        return;
-      }
-
-      const start = () => {
-        try {
-          const utterance = new Utterance(item.en);
-          utterance.lang = "en-US";
-          utterance.rate = 0.85;
-          const voices = synth.getVoices();
-          const bestVoice =
-            voices.find((voice) => voice.name.includes("Google US English")) ||
-            voices.find((voice) => voice.name.includes("Samantha")) ||
-            voices.find((voice) => voice.lang === "en-US") ||
-            voices.find((voice) => voice.lang.startsWith("en"));
-          if (bestVoice) utterance.voice = bestVoice;
-          utteranceRef.current = utterance;
-          utterance.onerror = (event) => {
-            if (
-              utteranceRef.current === utterance &&
-              event.error !== "canceled" &&
-              event.error !== "interrupted"
-            ) {
-              setAudioError(true);
-            }
-          };
-          Promise.resolve(synth.resume()).catch(() => {});
-          synth.speak(utterance);
-          setAudioError(false);
-        } catch (error) {
+      setAudioError(false);
+      audioPlayerRef.current.play({
+        unit,
+        index: questionId,
+        text: item.en,
+        rate: playbackRate,
+        onEnd: () => {
+          setAudioReady(true);
+          // Listening to the model must not count against the speed score.
+          // Replaying the same question does not reset the running clock.
+          setQuestionStartTime((before) => before ?? Date.now());
+        },
+        onError: () => {
           setAudioError(true);
-          console.warn("Speech synthesis unavailable:", error);
-        }
-      };
-
-      // Starting inside the gesture is important on Safari/iPad.
-      if (immediate) start();
-      else speechTimerRef.current = setTimeout(start, 200);
+          setAudioReady(false);
+        },
+      });
     },
-    [storyData, stopSpeech],
+    [storyData, unit, playbackRate],
   );
 
   useEffect(() => {
@@ -147,9 +117,10 @@ const ListeningModeBoard = ({
   const handleStartGame = () => {
     if (questions.length === 0) return;
     setIsStarted(true);
-    setQuestionStartTime(Date.now());
+    setQuestionStartTime(null);
+    setAudioReady(false);
     lastSpokenIndexRef.current = 0;
-    speakText(questions[0], true);
+    speakText(questions[0]);
   };
 
   const handleSkip = () => {
@@ -165,7 +136,7 @@ const ListeningModeBoard = ({
   };
 
   const handleChoiceClick = (id) => {
-    if (feedback || isCleared || !isStarted) return;
+    if (feedback || isCleared || !isStarted || !audioReady || questionStartTime === null) return;
     stopSpeech();
 
     if (id === questions[currentQueueIndex]) {
@@ -242,9 +213,9 @@ const ListeningModeBoard = ({
             ✅ お手付き（ミス）は減点。
             <br />✅{" "}
             <b>
-              もし音声が流れない場合は、「音声が聞こえない」ボタンを押してね。その問題は後でやり直せるよ。
+              音声は登録済みのお手本を優先。ない場合は自動読み上げを使います。音声が聞こえなければ「もう一度聞く」を押してね。
             </b>
-            （スキップしても得点は減らないよ）
+            （聞こえない場合はスキップしても減点されません）
           </p>
           <button onClick={handleStartGame} className="start-go-btn">
             START!
@@ -405,9 +376,12 @@ const ListeningModeBoard = ({
               textAlign: "center",
             }}
           >
-            音声を再生できません。もう一度聞くか、スキップして再挑戦してください。
+            自動再生ができませんでした。「もう一度聞く」を押すか、スキップして再挑戦してください。
           </p>
         )}
+        <p className="listening-ready-hint" role="status">
+          {audioReady ? "音声を聞き終えました。画像を選んでください。" : "お手本を再生してください。聞き終わると回答できます。"}
+        </p>
         <div className="sound-wave">
           <div className="wave-bar"></div>
           <div className="wave-bar"></div>
@@ -426,12 +400,27 @@ const ListeningModeBoard = ({
             right: "20px",
           }}
         >
-          {/* 🌟 音声が聞こえないボタン */}
+          <label className="audio-speed-control">
+            再生速度
+            <select
+              aria-label="リスニングの再生速度"
+              value={playbackRate}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                setPlaybackRate(next);
+                audioPlayerRef.current.setRate(next);
+              }}
+            >
+              {PLAYBACK_RATES.map((rate) => (
+                <option key={rate} value={rate}>{rate.toFixed(2).replace(/0$/, "")}×</option>
+              ))}
+            </select>
+          </label>
           <button onClick={handleSkip} className="skip-btn">
             ⚠️ 音声が聞こえない
           </button>
           <button
-            onClick={() => speakText(questions[currentQueueIndex], true)}
+            onClick={() => speakText(questions[currentQueueIndex])}
             className="repeat-btn"
           >
             🔁 もう一度聞く
@@ -462,9 +451,11 @@ const ListeningModeBoard = ({
               aria-label={"選択画像 " + (id + 1)}
               key={id}
               onClick={() => handleChoiceClick(id)}
+              disabled={!audioReady || questionStartTime === null}
               style={{
                 flex: 1,
-                cursor: "pointer",
+                cursor: audioReady ? "pointer" : "not-allowed",
+                opacity: audioReady ? 1 : 0.72,
                 borderRadius: "15px",
                 overflow: "hidden",
                 border: isCorrect

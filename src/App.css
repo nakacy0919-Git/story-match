@@ -1472,3 +1472,44 @@ button {
     animation: none;
   }
 }
+
+
+/* Compact model-audio controls for desktop, iPad, and small screens. */
+.reading-audio-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.audio-speed-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: #586d89;
+}
+.audio-speed-control select {
+  border: 1px solid #bfcde1;
+  border-radius: 10px;
+  background: #fff;
+  color: #233953;
+  font: inherit;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+.listening-ready-hint {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #76529b;
+  text-align: center;
+}
+@media (max-width: 700px) {
+  .reading-audio-toolbar .subtle { padding: 8px 10px; }
+  .audio-speed-control { font-size: 12px; }
+  .audio-speed-control select { padding: 6px; }
+  .mission-active .listening-audio-actions { gap: 6px !important; }
+}
