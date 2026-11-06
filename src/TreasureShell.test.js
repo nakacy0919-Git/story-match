@@ -41,3 +41,37 @@ test("vocabulary and grammar are available without student registration", () => 
   fireEvent.click(screen.getByRole("button", { name: /Grammar.*英文の並び替え/ }));
   expect(screen.getByRole("heading", { name: "Sentence Builder" })).toBeInTheDocument();
 });
+
+
+test("a vocabulary word opens an anchored popup with English playback", () => {
+  window.SpeechSynthesisUtterance=function(word){this.text=word;};
+  render(<App />);
+  fireEvent.click(screen.getByRole("button",{name:"Unit 15"}));
+  fireEvent.click(screen.getAllByRole("button",{name:/crowd の意味と発音/})[0]);
+  const dialog=screen.getByRole("dialog",{name:"単語の意味と発音"});
+  expect(dialog).toHaveTextContent("群衆");
+  expect(dialog).toHaveTextContent("crowd");
+  expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(1);
+  expect(document.querySelector(".th-definition")).toBeNull();
+  fireEvent.click(screen.getByRole("button",{name:"ポップアップを閉じる"}));
+  expect(screen.queryByRole("dialog",{name:"単語の意味と発音"})).toBeNull();
+});
+
+test("tapping a sentence opens its Japanese translation instead of pushing down the passage", async () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole("button",{name:"Unit 15"}));
+  const sentence=document.querySelector('[data-sentence-index="14"]');
+  expect(sentence).toHaveTextContent("Clearly");
+  fireEvent.pointerUp(sentence);
+  const dialog=await screen.findByRole("dialog",{name:"選択した英文の訳"});
+  expect(dialog).toHaveTextContent("一文の日本語訳");
+  expect(dialog).toHaveTextContent("グループの人数が少ないほど");
+});
+
+test("full Japanese translation remains available within the Script panel", () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole("button",{name:"Unit 15"}));
+  fireEvent.click(screen.getByRole("button",{name:/全文訳を表示/}));
+  expect(screen.getByRole("button",{name:"全文訳を隠す"})).toBeInTheDocument();
+  expect(document.querySelector(".th-translation")).toBeInTheDocument();
+});

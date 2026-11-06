@@ -3,6 +3,7 @@ import { unitScripts, unitTranslations, unitVocab } from "../treasureData";
 import { allUnitsData } from "../unitsData";
 import { useReadingSpeech } from "../utils/useReadingSpeech";
 import { score } from "../utils/readingScore";
+import InteractivePassage from "./InteractivePassage";
 
 export const unitKey = (u) => "U" + String(u).padStart(2, "0") + "_P1";
 export function cleanText(s) {
@@ -23,35 +24,23 @@ export function getLesson(unit, scope = "full") {
     words: unitVocab[prefix] || [],
   };
 }
-function GlossaryText({text,words}) {
-  const [active,setActive] = useState(null);
-  const termMap = useMemo(() => {
-    const m = new Map();
-    words.forEach((v) => (v.targetStrings || [v.word]).forEach((term) => {if(term)m.set(term.toLowerCase(), v);}));
-    return m;
-  },[words]);
-  const pieces = useMemo(() => {
-    const keys = [...termMap.keys()].sort((a,b) => b.length-a.length);
-    if(!keys.length)return [text];
-    const escaped=keys.map((w)=>w.replace(/[|\\{}()[\]^$+*?.]/g,"\\$&"));
-    return text.split(new RegExp("\\b("+escaped.join("|")+")\\b","gi"));
-  },[text,termMap]);
-  return <div className="th-reading-text">
-    {pieces.map((piece,i) => termMap.has(piece.toLowerCase())
-      ? <button key={i} className="th-vocab-inline" onClick={()=>setActive(termMap.get(piece.toLowerCase()))}>{piece}</button>
-      : <React.Fragment key={i}>{piece}</React.Fragment>)}
-    {active && <div className="th-definition"><b>{active.word}</b> {active.pronunciation || active.pron || ""}
-      <p>{active.meaning}</p><button className="th-small" onClick={()=>setActive(null)}>閉じる</button></div>}
-  </div>;
-}
 export function ScriptPanel({unit,scope,japaneseOnly=false}) {
   const lesson=getLesson(unit,scope);
+  const [showFullJapanese,setShowFullJapanese]=useState(false);
+  useEffect(()=>setShowFullJapanese(false),[unit,scope,japaneseOnly]);
   return <section className="th-panel">
     <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · {scope==="full"?"FULL TEXT":scope.toUpperCase()}</span>
-      <h2>{japaneseOnly?"Japanese Translation":"Reading Script"}</h2><p>本文中の青い単語を押すと意味が表示されます。</p></header>
-    {!japaneseOnly && (lesson.en?<GlossaryText key={unit+scope} text={lesson.en} words={lesson.words}/>:<p>この範囲の英文は未登録です。</p>)}
-    {japaneseOnly && <div className="th-translation">{lesson.ja || "日本語訳は未登録です。"}</div>}
-    {japaneseOnly && lesson.en && <details className="th-details"><summary>英文も表示する</summary><GlossaryText text={lesson.en} words={lesson.words}/></details>}
+      <h2>{japaneseOnly?"Japanese Translation":"Reading Script"}</h2>
+      <p>{japaneseOnly ? "このUnitの日本語訳をまとめて確認できます。" : "青い単語を押すと意味と発音を表示。英文の一部を選択するか、一文をタップすると日本語訳が出ます。"}</p></header>
+    {!japaneseOnly && lesson.en && <div className="th-translation-toolbar">
+      <button type="button" className="th-small" aria-pressed={showFullJapanese} onClick={()=>setShowFullJapanese((v)=>!v)}>
+        {showFullJapanese?"全文訳を隠す":"🇯🇵 全文訳を表示"}
+      </button>
+    </div>}
+    {!japaneseOnly && (lesson.en ? <InteractivePassage key={unit+":"+scope} text={lesson.en} words={lesson.words} unit={unit} scope={scope}/> : <p>この範囲の英文は未登録です。</p>)}
+    {((japaneseOnly||showFullJapanese))&&<div className="th-translation">{lesson.ja || "日本語訳は未登録です。"}</div>}
+    {japaneseOnly&&lesson.en&&<details className="th-details"><summary>英文も表示する</summary>
+      <InteractivePassage key={"ja:"+unit+":"+scope} text={lesson.en} words={lesson.words} unit={unit} scope={scope}/></details>}
   </section>;
 }
 function shuffle(arr) {
