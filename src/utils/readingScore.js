@@ -27,31 +27,134 @@ function normalized(text) {
 function words(text) {
   return units(normalized(text)).map((x) => x.key);
 }
-function comparison(sentence) {
-  const expected = words(sentence),
-    ignored = [];
-  // Names are reviewed against this curriculum, not guessed from capitalization.
-  const names = readingNames
-    .filter((name) => String(sentence).includes(name))
-    .map(words)
-    .sort((a, b) => b.length - a.length);
-  for (let i = 0; i < expected.length; ) {
-    const name = names.find((tokens) =>
-      tokens.every(
-        (v, j) =>
-          expected[i + j] === v ||
-          (j === tokens.length - 1 && expected[i + j] === v + "s"),
-      ),
+// Foreign phrases written in Latin letters cannot be reliably detected from
+// spelling alone. Only reviewed phrases are excluded; ordinary English stays scored.
+const foreignPhrases = [
+  "bonjour", "merci", "hola", "gracias", "adios", "adiós",
+  "buenos días", "buenos dias", "guten tag", "namaste",
+  "konnichiwa", "arigatou", "arigato", "sayonara", "ni hao",
+  "xin chào", "xin chao", "annyeong", "sawasdee",
+];
+const IGNORE_KEY = "qzxomittedwordqzx";
+const latinLetter = /[a-z]/i;
+const unicodeWord = /[\p{L}\p{M}\p{N}]/u;
+
+function escapeRegex(text) {
+  return text.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&");
+}
+function addIgnoredSpan(spans, start, end) {
+  if (start >= end || spans.some((s) => start < s.end && end > s.start))
+    return;
+  spans.push({ start, end });
+}
+function protectedSpans(sentence) {
+  const source = String(sentence || "");
+  const spans = [];
+
+  // Prefer complete, manually reviewed names and titles. Match case and word
+  // boundaries so ordinary "mark" is never mistaken for the name "Mark".
+  for (const phrase of [...readingNames, ...foreignPhrases].sort(
+    (x, y) => y.length - x.length,
+  )) {
+    const pattern = new RegExp(
+      escapeRegex(phrase).replace(/['’]/g, "['’]"),
+      readingNames.includes(phrase) ? "gu" : "giu",
     );
-    if (name) {
-      ignored.push({ max: Math.min(10, name.length + 2) });
-      i += name.length;
-    } else {
-      ignored.push(expected[i]);
-      i++;
+    for (const found of source.matchAll(pattern)) {
+      const start = found.index, end = start + found[0].length;
+      if (
+        !unicodeWord.test(source[start - 1] || "") &&
+        !unicodeWord.test(source[end] || "")
+      )
+        addIgnoredSpan(spans, start, end);
     }
   }
-  return ignored;
+
+  // Kanji/kana/Hangul/etc. followed by a phonetic hint in parentheses:
+  // 八 (bā), 漢字 (kanji), 日本語 (nihongo). Ignore the hint too.
+  const romanization = /\(\s*[\p{L}\p{M}]+(?:[\s'-][\p{L}\p{M}]+)*\s*\)/gu;
+  for (const match of source.matchAll(romanization)) {
+    const preceding = source.slice(0, match.index).trimEnd();
+    const previousWord = preceding.match(/[\p{L}\p{M}]+$/u)?.[0] || "";
+    if (/[^\x00-\x7f]/u.test(previousWord))
+      addIgnoredSpan(spans, match.index, match.index + match[0].length);
+  }
+
+  const tokens = [...source.matchAll(
+    /[\p{L}\p{M}]+(?:['’-][\p{L}\p{M}]+)*/gu,
+  )];
+  const isTitle = (word) => /^[A-Z][a-z]+$/.test(word);
+  const sentenceStart = (start) => {
+    const preceding = source.slice(0, start)
+      .replace(/[\s"'“”‘’()[\]{}]+$/gu, "");
+    return !preceding || /[.!?:]$/.test(preceding);
+  };
+  const starterWords = new Set([
+    "a", "an", "the", "i", "we", "you", "he", "she", "it",
+    "they", "in", "on", "at", "to", "from", "for", "of",
+    "with", "as", "by", "and", "but", "or", "so", "if",
+    "when", "while", "after", "before", "because", "however",
+    "today", "yesterday", "tomorrow", "then", "now", "once",
+    "this", "that", "these", "those", "there", "here",
+  ]);
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i], word = token[0], start = token.index;
+    const end = start + word.length;
+    const letters = word.replace(/['’-]/g, "");
+    // All non-ASCII words/characters are not English-only score targets.
+    // This includes Han characters and accented foreign-language words.
+    if (/[^\x00-\x7f]/u.test(letters)) {
+      addIgnoredSpan(spans, start, end);
+      continue;
+    }
+    if (word === "I") continue;
+    const titled = isTitle(word);
+    const acronym = /^[A-Z]{2,}$/.test(word);
+    const internalCaps = /^[a-z]+[A-Z][A-Za-z]*$/.test(word);
+    const atStart = sentenceStart(start);
+
+    // Unknown single capitalized words in the middle of a sentence are
+    // usually names; sentence-initial regular English remains assessable.
+    if ((titled && !atStart) || acronym || internalCaps)
+      addIgnoredSpan(spans, start, end);
+
+    // Unknown two-word names at the beginning, e.g. "Ada Lovelace".
+    if (
+      titled && atStart && !starterWords.has(word.toLowerCase()) &&
+      isTitle(tokens[i + 1]?.[0] || "") &&
+      /^\s+$/.test(source.slice(end, tokens[i + 1].index))
+    ) {
+      addIgnoredSpan(spans, start, end);
+      addIgnoredSpan(
+        spans,
+        tokens[i + 1].index,
+        tokens[i + 1].index + tokens[i + 1][0].length,
+      );
+    }
+  }
+  return spans.sort((x, y) => x.start - y.start);
+}
+
+function comparison(sentence) {
+  const source = String(sentence || "");
+  const spans = protectedSpans(source);
+  let masked = "", cursor = 0;
+  const ignoredWidths = [];
+  for (const span of spans) {
+    masked += source.slice(cursor, span.start) + " " + IGNORE_KEY + " ";
+    ignoredWidths.push(
+      Math.min(10, Math.max(2, words(source.slice(span.start, span.end)).length + 2)),
+    );
+    cursor = span.end;
+  }
+  masked += source.slice(cursor);
+  let ignored = 0;
+  return words(masked).map((token) =>
+    token === IGNORE_KEY
+      ? { max: ignoredWidths[ignored++] || 2 }
+      : token,
+  );
 }
 function score(sentence, spoken) {
   const expected = comparison(sentence),
