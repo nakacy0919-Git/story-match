@@ -22,7 +22,7 @@ test("single-page Treasure Hunt workspace opens scripts and original game modes"
   expect(screen.getByRole("heading", { name: "Japanese Translation" })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: /Story Match.*4つのゲームモード/ }));
-  expect(screen.getByText("Student Registration")).toBeInTheDocument();
+  expect(screen.getByText(/Student Registration/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("クラス"), { target: { value: "3-2" } });
   fireEvent.change(screen.getByLabelText("番号"), { target: { value: "8" } });
   fireEvent.change(screen.getByLabelText("氏名"), { target: { value: "Student" } });
