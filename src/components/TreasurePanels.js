@@ -98,7 +98,7 @@ export function VocabularyPanel({unit}) {
 export function GrammarPanel({unit}) {
   const sentences=useMemo(()=>(allUnitsData[unit]||[]).map((x)=>x.en)
     .filter((s)=>s.split(/\s+/).length>=5&&s.split(/\s+/).length<=16).slice(0,10),[unit]);
-  const [index,setIndex]=useState(0),[picked,setPicked]=useState([]),[checked,setChecked]=useState(false),[solved,setSolved]=useState([]);
+  const [index,setIndex]=useState(0),[picked,setPicked]=useState([]),[checked,setChecked]=useState(false),[,setSolved]=useState([]);
   const [best,saveBest]=useBest("th-grammar-best:"+unit);
   useEffect(()=>{setIndex(0);setPicked([]);setChecked(false);setSolved([]);},[unit]);
   const sentence=sentences[index]||"";
