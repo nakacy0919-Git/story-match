@@ -7,7 +7,7 @@ import {
   cleanup,
 } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import App from "./App";
+import App from "./StoryMatchApp";
 import { progressKey, recordResult } from "./utils/progress";
 const student = { class: "3-2", number: "8", name: "Test Student" };
 class SpeechMock {
