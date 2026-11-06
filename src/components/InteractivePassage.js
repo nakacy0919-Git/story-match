@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { lookupTranslation, sentenceParts } from "../utils/treasureTranslation";
 
 // A true floating card: it is rendered outside the scrollable lesson panel.
-function FloatingCard({popup, onClose, onSpeak}) {
+function FloatingCard({popup, onClose, onSpeak, audioError}) {
   if (!popup) return null;
   const cardWidth=Math.min(372, window.innerWidth-24);
   const left=Math.max(12, Math.min(popup.rect.left,window.innerWidth-cardWidth-12));
@@ -26,6 +26,7 @@ function FloatingCard({popup, onClose, onSpeak}) {
         <button type="button" className="th-float-speak" onClick={()=>onSpeak(popup.word.word)}>
           🔊 発音を聞く
         </button>
+        {audioError && <div className="th-audio-error" role="alert">{audioError}</div>}
       </> : <>
         <div className="th-float-source">{popup.sentence}</div>
         <span className="th-float-sublabel">{popup.translation.label}</span>
@@ -149,12 +150,12 @@ export default function InteractivePassage({text,words,unit,scope}) {
   return <div ref={containerRef} className="th-reading-text th-interactive-text"
     onPointerDown={()=>{selectingRef.current=true;}}
     onPointerUp={handlePointerUp}
+    onPointerCancel={()=>{selectingRef.current=false;}}
     onKeyUp={()=>selectedSentence()}>
     {sentences.map(({prefix,text:line},index)=>
       <React.Fragment key={index}>{prefix}<span className="th-sentence"
         data-sentence-index={index} title="英文を選択すると日本語訳が表示されます">
         {renderWords(line)}</span></React.Fragment>)}
-    <FloatingCard popup={popup} onClose={close} onSpeak={speak}/>
-    {audioError&&<div className="th-audio-error" role="alert">{audioError}</div>}
+    <FloatingCard popup={popup} onClose={close} onSpeak={speak} audioError={audioError}/>
   </div>;
 }
