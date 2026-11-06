@@ -98,14 +98,14 @@ export function VocabularyPanel({unit}) {
 export function GrammarPanel({unit}) {
   const sentences=useMemo(()=>(allUnitsData[unit]||[]).map((x)=>x.en)
     .filter((s)=>s.split(/\s+/).length>=5&&s.split(/\s+/).length<=16).slice(0,10),[unit]);
-  const [index,setIndex]=useState(0),[picked,setPicked]=useState([]),[checked,setChecked]=useState(false),[correctCount,setCorrectCount]=useState(0);
+  const [index,setIndex]=useState(0),[picked,setPicked]=useState([]),[checked,setChecked]=useState(false),[solved,setSolved]=useState([]);
   const [best,saveBest]=useBest("th-grammar-best:"+unit);
-  useEffect(()=>{setIndex(0);setPicked([]);setChecked(false);setCorrectCount(0);},[unit]);
+  useEffect(()=>{setIndex(0);setPicked([]);setChecked(false);setSolved([]);},[unit]);
   const sentence=sentences[index]||"";
   const words=useMemo(()=>sentence.split(/\s+/).filter(Boolean),[sentence]);
   const positions=useMemo(()=>{const a=shuffle(words.map((_,i)=>i));return a.every((n,i)=>n===i)?a.reverse():a;},[words]);
   const correct=picked.length===words.length&&picked.every((n,i)=>n===i);
-  const check=()=>{if(checked)return;setChecked(true);if(correct){setCorrectCount((n)=>n+1);saveBest(Math.max(best,correctCount+1));}};
+  const check=()=>{if(checked)return;setChecked(true);if(correct){setSolved((old)=>{const next=[...new Set([...old,index])];saveBest(next.length);return next;});}};
   return <section className="th-panel">
     <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · GRAMMAR</span><h2>Sentence Builder</h2>
       <p>実際の本文を使った語順並び替え練習 · ベスト {best} 問正解</p></header>
