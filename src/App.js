@@ -42,7 +42,7 @@ function App() {
         aria-pressed={n===unit} onClick={()=>changeUnit(n)}>Unit {n}</button>)}
     </nav>
     <div className="th-workspace">
-      <div className="th-stage">
+      <div className="th-stage" style={{ backgroundImage: 'linear-gradient(155deg,rgba(243,248,253,.91),rgba(253,244,237,.92)),url("/treasure-cover.webp")', backgroundSize: "cover", backgroundPosition: "center" }}>
         <div className="th-stage-top">
           <div><span className="th-kicker">TREASURE HUNT · UNIT {unit}</span>
             <strong>{current.icon} {current.name}</strong></div>
