@@ -37,7 +37,7 @@ test("only checked-in model recordings are advertised", () => {
   expect(hasModelAudio(8, 11)).toBe(true);
   expect(hasModelAudio(2, 0)).toBe(false);
   expect(hasModelAudio(7, 12)).toBe(false);
-  expect(modelAudioUrl(7, 0)).toContain("/audio/unit7/1.mp3");
+  expect(modelAudioUrl(7, 0)).toContain("/audio/unit7/1.wav");
 });
 
 test("reading units without MP3 use speech synthesis immediately at the chosen speed", () => {
