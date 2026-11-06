@@ -12,7 +12,7 @@ export function sentenceParts(text) {
   })).filter((item) => item.text);
 }
 export function normalizeEnglish(text) {
-  return String(text || "").toLowerCase()
+  return String(text || "").replace(/<br\s*\/?>/gi," ").replace(/<[^>]*>/g," ").toLowerCase()
     .replace(/[’‘]/g, "'")
     .replace(/(\d)\s*%/g, "$1 percent")
     .replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
