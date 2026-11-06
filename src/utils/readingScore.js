@@ -66,7 +66,7 @@ function protectedSpans(sentence) {
       const start = found.index;
       let end = start + found[0].length;
       // Proper-name possessives (Celina’s, Terry's) form one optional span.
-      if (readingNames.includes(phrase) && /^['’]s(?![\\p{L}\\p{M}])/u.test(source.slice(end)))
+      if (readingNames.includes(phrase) && /^['’]s\b/u.test(source.slice(end)))
         end += 2;
       if (
         !unicodeWord.test(source[start - 1] || "") &&
