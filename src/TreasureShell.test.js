@@ -75,3 +75,40 @@ test("full Japanese translation remains available within the Script panel", () =
   expect(screen.getByRole("button",{name:"全文訳を隠す"})).toBeInTheDocument();
   expect(document.querySelector(".th-translation")).toBeInTheDocument();
 });
+
+
+test("reading font size controls are compact, bounded, and retained across units",()=>{
+  render(<App />);
+  fireEvent.click(screen.getByRole("button",{name:"Unit 15"}));
+  const paragraph=document.querySelector(".th-interactive-text");
+  expect(paragraph).toHaveStyle({fontSize:"22px"});
+  fireEvent.click(screen.getByRole("button",{name:"文字を大きく"}));
+  expect(paragraph).toHaveStyle({fontSize:"24px"});
+  expect(screen.getByLabelText("現在の文字サイズ")).toHaveTextContent("24px");
+  expect(window.localStorage.getItem("treasure-hunt-reading-font-size")).toBe("24");
+  fireEvent.click(screen.getByRole("button",{name:"Unit 14"}));
+  expect(document.querySelector(".th-interactive-text")).toHaveStyle({fontSize:"24px"});
+  fireEvent.click(screen.getByRole("button",{name:"文字を小さく"}));
+  expect(document.querySelector(".th-interactive-text")).toHaveStyle({fontSize:"22px"});
+});
+
+test("word popup is a centered modal and shows pronunciation",()=>{
+  window.SpeechSynthesisUtterance=function(word){this.text=word;};
+  render(<App />);
+  fireEvent.click(screen.getByRole("button",{name:"Unit 15"}));
+  fireEvent.click(screen.getAllByRole("button",{name:/crowd の意味と発音/})[0]);
+  const wordModal=screen.getByRole("dialog",{name:"単語の意味と発音"});
+  expect(wordModal).toHaveClass("th-word-modal");
+  expect(wordModal.parentElement).toHaveClass("th-word-backdrop");
+  expect(wordModal).toHaveAttribute("aria-modal","true");
+  expect(wordModal).toHaveTextContent("crowd");
+  fireEvent.pointerDown(wordModal.parentElement);
+  expect(screen.queryByRole("dialog",{name:"単語の意味と発音"})).toBeNull();
+});
+
+test("Japanese translation uses the same adjustable font size",()=>{
+  render(<App />);
+  fireEvent.click(screen.getByRole("button",{name:/Japanese.*日本語訳/}));
+  fireEvent.click(screen.getByRole("button",{name:"文字を大きく"}));
+  expect(document.querySelector(".th-translation")).toHaveStyle({fontSize:"24px"});
+});
