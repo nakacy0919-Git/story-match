@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { lookupTranslation, sentenceParts } from "../utils/treasureTranslation";
 
@@ -57,8 +57,8 @@ export default function InteractivePassage({text,words,unit,scope}) {
     const escaped=keys.map((item)=>item.replace(/[|\\{}()[\]^$+*?.]/g,"\\$&"));
     return new RegExp("\\b("+escaped.join("|")+")\\b","gi");
   },[terms]);
-  const close=()=>{setPopup(null);setAudioError("");};
-  useEffect(()=>{close();},[unit,scope,text]);
+  const close=useCallback(()=>{setPopup(null);setAudioError("");},[]);
+  useEffect(()=>{close();},[unit,scope,text,close]);
   const speak=(word)=>{
     setAudioError("");
     try{
@@ -78,7 +78,7 @@ export default function InteractivePassage({text,words,unit,scope}) {
     setPopup({kind:"word",word,rect:event.currentTarget.getBoundingClientRect(),cardRef});
     speak(word.word);
   };
-  const openSentence=(index,rect)=>{
+  const openSentence=useCallback((index,rect)=>{
     if(index<0 || index>=sentenceTexts.length)return;
     const sentence=sentenceTexts[index];
     setPopup({
@@ -86,8 +86,8 @@ export default function InteractivePassage({text,words,unit,scope}) {
       translation:lookupTranslation(unit,scope,index,sentence,sentenceTexts),
       cardRef,
     });
-  };
-  const selectedSentence=()=>{
+  },[unit,scope,sentenceTexts]);
+  const selectedSentence=useCallback(()=>{
     const selection=window.getSelection?.();
     const host=containerRef.current;
     if(!selection||selection.isCollapsed||!selection.toString().trim()||!host||!selection.rangeCount)return false;
@@ -99,7 +99,7 @@ export default function InteractivePassage({text,words,unit,scope}) {
     const rect=selection.getRangeAt(0).getBoundingClientRect();
     openSentence(Number(sentenceEl.dataset.sentenceIndex),rect);
     return true;
-  };
+  },[openSentence]);
   const handlePointerUp=(event)=>{
     selectingRef.current=false;
     if(event.target.closest?.(".th-vocab-inline")||event.target.closest?.(".th-float-card"))return;
@@ -132,7 +132,7 @@ export default function InteractivePassage({text,words,unit,scope}) {
       document.removeEventListener("pointerdown",onOutside);
       if(timerRef.current)window.clearTimeout(timerRef.current);
     };
-  },[popup,unit,scope,sentenceTexts]);
+  },[popup,selectedSentence,close]);
   const renderWords=(line)=>{
     if(!wordRegex)return line;
     const bits=line.split(wordRegex);
