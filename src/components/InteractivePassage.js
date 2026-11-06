@@ -3,41 +3,51 @@ import { createPortal } from "react-dom";
 import { lookupTranslation, sentenceParts } from "../utils/treasureTranslation";
 
 // A true floating card: it is rendered outside the scrollable lesson panel.
-function FloatingCard({popup, onClose, onSpeak, audioError}) {
+// Words use a centered dialog; selected sentences retain contextual floating translations.
+function FloatingCard({popup,onClose,onSpeak,audioError}) {
   if (!popup) return null;
-  const cardWidth=Math.min(372, window.innerWidth-24);
-  const left=Math.max(12, Math.min(popup.rect.left,window.innerWidth-cardWidth-12));
-  const cardHeight=popup.kind==="word"?220:284;
+  const isWord=popup.kind==="word";
+  const cardWidth=Math.min(372,window.innerWidth-24);
+  const left=Math.max(12,Math.min(popup.rect.left,window.innerWidth-cardWidth-12));
+  const cardHeight=284;
   const top=popup.rect.bottom+cardHeight+14<window.innerHeight
     ? popup.rect.bottom+10
-    : Math.max(12, popup.rect.top-cardHeight-10);
-  return createPortal(
-    <div className="th-float-card" ref={popup.cardRef} role="dialog" aria-modal="false"
-      aria-label={popup.kind==="word"?"単語の意味と発音":"選択した英文の訳"}
-      style={{left,top,width:cardWidth}}>
-      <div className="th-float-header">
-        <span>{popup.kind==="word"?"📘 Vocabulary":"🇯🇵 Sentence Translation"}</span>
-        <button type="button" className="th-float-close" onClick={onClose} aria-label="ポップアップを閉じる">×</button>
-      </div>
-      {popup.kind==="word" ? <>
-        <div className="th-float-word">{popup.word.word}</div>
-        {popup.word.pronunciation && <div className="th-float-phonetic">{popup.word.pronunciation}</div>}
-        <div className="th-float-meaning">{popup.word.meaning}</div>
-        <button type="button" className="th-float-speak" onClick={()=>onSpeak(popup.word.word)}>
-          🔊 発音を聞く
-        </button>
-        {audioError && <div className="th-audio-error" role="alert">{audioError}</div>}
-      </> : <>
-        <div className="th-float-source">{popup.sentence}</div>
-        <span className="th-float-sublabel">{popup.translation.label}</span>
-        <div className="th-float-ja">{popup.translation.text || "対応する日本語訳は未登録です。"}</div>
-        {popup.translation.kind!=="sentence" && <small className="th-float-caveat">この箇所は一文訳を確認できないため、対応する広い範囲の訳を表示しています。</small>}
-      </>}
-    </div>,
-    document.body
-  );
+    : Math.max(12,popup.rect.top-cardHeight-10);
+  const content=<div className={"th-float-card"+(isWord?" th-word-modal":"")}
+    ref={popup.cardRef} role="dialog" aria-modal={isWord?"true":"false"}
+    aria-label={isWord?"単語の意味と発音":"選択した英文の訳"}
+    style={isWord?undefined:{left,top,width:cardWidth}}>
+    <div className="th-float-header">
+      <span>{isWord?"📘 Vocabulary":"🇯🇵 Sentence Translation"}</span>
+      <button type="button" className="th-float-close" onClick={onClose}
+        autoFocus={isWord} aria-label="ポップアップを閉じる">×</button>
+    </div>
+    {isWord ? <>
+      <div className="th-float-word">{popup.word.word}</div>
+      {(popup.word.pronunciation||popup.word.pron)&&<div className="th-float-phonetic">
+        {popup.word.pronunciation||popup.word.pron}
+      </div>}
+      <div className="th-float-meaning">{popup.word.meaning}</div>
+      <button type="button" className="th-float-speak"
+        onClick={()=>onSpeak(popup.word.word)}>🔊 発音を聞く</button>
+      {audioError&&<div className="th-audio-error" role="alert">{audioError}</div>}
+    </> : <>
+      <div className="th-float-source">{popup.sentence}</div>
+      <span className="th-float-sublabel">{popup.translation.label}</span>
+      <div className="th-float-ja">{popup.translation.text||"対応する日本語訳は未登録です。"}</div>
+      {popup.translation.kind!=="sentence"&&<small className="th-float-caveat">
+        この箇所は一文訳を確認できないため、対応する広い範囲の訳を表示しています。
+      </small>}
+    </>}
+  </div>;
+  return createPortal(isWord
+    ? <div className="th-word-backdrop" onPointerDown={(event)=>{
+        if(event.target===event.currentTarget)onClose();
+      }}>{content}</div>
+    : content,document.body);
 }
-export default function InteractivePassage({text,words,unit,scope}) {
+
+export default function InteractivePassage({text,words,unit,scope,fontSize}) {
   const [popup,setPopup]=useState(null);
   const [audioError,setAudioError]=useState("");
   const containerRef=useRef(null), cardRef=useRef(null), timerRef=useRef(null), selectingRef=useRef(false);
@@ -148,6 +158,7 @@ export default function InteractivePassage({text,words,unit,scope}) {
     });
   };
   return <div ref={containerRef} className="th-reading-text th-interactive-text"
+    style={fontSize?{fontSize:fontSize+"px"}:undefined}
     onPointerDown={()=>{selectingRef.current=true;}}
     onPointerUp={handlePointerUp}
     onPointerCancel={()=>{selectingRef.current=false;}}

@@ -107,3 +107,61 @@
 .th-float-caveat{display:block;color:#8a8090;font-size:11px;line-height:1.5;margin-top:12px}
 .th-audio-error{font-size:12px;color:#b63743;margin-top:14px;background:#fff4f4;padding:8px;border-radius:8px}
 @media(max-width:650px){.th-float-card{padding:13px 15px;border-radius:14px;max-height:45vh}.th-float-ja{font-size:15px}}
+
+
+/* iPad reading density: use the full workspace width, without shrinking other game modes. */
+.th-stage-content:not(.is-story){padding:clamp(7px,1vw,14px);}
+.th-panel.th-script-panel{width:100%;max-width:none;min-height:0;padding:clamp(13px,1.5vw,22px) clamp(13px,1.75vw,25px) 24px;border-radius:15px}
+.th-script-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px 14px}
+.th-script-heading .th-script-title{min-width:160px}
+.th-script-heading h2{font-size:clamp(21px,2.1vw,29px);line-height:1.2;margin:3px 0}
+.th-script-heading .th-kicker{font-size:10px;line-height:1.2;letter-spacing:1px}
+.th-script-controls{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.th-font-controls{display:flex;align-items:center;gap:3px;border:1px solid #d9e1ed;border-radius:9px;background:#f7fafd;padding:3px 5px}
+.th-font-label{font-size:11px;font-weight:850;color:#6c819d;margin:0 3px 0 2px}
+.th-font-controls button{width:29px;height:29px;display:inline-grid;place-items:center;padding:0;
+  background:white;border:1px solid #d4e0ef;border-radius:7px;color:#23517e;font-size:20px;font-weight:800;line-height:1}
+.th-font-controls button:disabled{color:#a4b2c4;opacity:.52}
+.th-font-controls output{font-size:11px;font-weight:800;color:#5f7290;min-width:35px;text-align:center;white-space:nowrap}
+.th-compact-translation{padding:8px 11px;font-size:11px;white-space:nowrap}
+.th-script-hint{font-size:11px;color:#7890a9;line-height:1.4;margin:6px 0 10px}
+.th-script-panel .th-reading-text{line-height:1.59}
+.th-script-panel .th-translation{line-height:1.65}
+.th-script-panel .th-details{margin-top:12px}
+.th-stage-top{padding:8px 16px}
+.th-stage-top strong{font-size:17px}
+.th-stage-top>div:first-child{gap:2px}
+@media(min-width:651px) and (max-width:1200px){
+  .th-workspace{grid-template-columns:minmax(0,1fr) 180px}
+  .th-sidebar{padding:6px;gap:7px}
+  .th-side-button{gap:5px;padding:7px 5px}
+  .th-side-button small{font-size:9px}
+  .th-side-button b{font-size:12px}
+  .th-sidebar-buttons{gap:5px}
+  .th-stage-content:not(.is-story){padding:6px}
+  .th-panel.th-script-panel{padding:12px 14px 18px}
+}
+@media(min-width:651px) and (max-width:850px){
+  .th-workspace{grid-template-columns:minmax(0,1fr) 165px}
+  .th-script-heading h2{font-size:22px}
+}
+@media(max-width:650px){
+  .th-script-heading{align-items:flex-start}
+  .th-script-controls{justify-content:flex-start;width:100%}
+  .th-panel.th-script-panel{padding:11px 12px 18px}
+  .th-script-hint{font-size:10px}
+}
+
+/* Modal vocabulary card, centered both in the viewport and internally. */
+.th-word-backdrop{position:fixed;inset:0;z-index:12000;display:grid;place-items:center;padding:14px;
+  background:rgba(20,36,58,.44);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.th-word-backdrop .th-float-card.th-word-modal{
+  position:relative;left:auto;top:auto;width:min(420px,calc(100vw - 28px));
+  max-width:100%;max-height:min(78dvh,500px);border-radius:20px;padding:19px 25px 25px;
+  text-align:center;margin:0;box-shadow:0 24px 65px #10233e65}
+.th-word-modal .th-float-word{font-size:clamp(30px,5vw,42px);line-height:1.25;text-align:center;margin-top:4px}
+.th-word-modal .th-float-phonetic{font-size:16px;text-align:center}
+.th-word-modal .th-float-meaning{font-size:18px;text-align:center;margin:15px 0 18px}
+.th-word-modal .th-float-speak{justify-content:center;min-width:168px}
+.th-word-modal .th-float-header{text-align:left}
+@media(max-width:650px){.th-word-backdrop .th-float-card.th-word-modal{padding:15px 17px 20px}}

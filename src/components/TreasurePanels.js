@@ -24,25 +24,64 @@ export function getLesson(unit, scope = "full") {
     words: unitVocab[prefix] || [],
   };
 }
+const FONT_SIZE_STORAGE_KEY = "treasure-hunt-reading-font-size";
+const MIN_FONT_SIZE = 16;
+const MAX_FONT_SIZE = 32;
+const DEFAULT_FONT_SIZE = 22;
+
 export function ScriptPanel({unit,scope,japaneseOnly=false}) {
   const lesson=getLesson(unit,scope);
   const [showFullJapanese,setShowFullJapanese]=useState(false);
+  const [fontSize,setFontSize]=useState(()=>{
+    try {
+      const saved=Number(window.localStorage.getItem(FONT_SIZE_STORAGE_KEY));
+      return saved>=MIN_FONT_SIZE&&saved<=MAX_FONT_SIZE&&Number.isFinite(saved)?saved:DEFAULT_FONT_SIZE;
+    } catch (_) {
+      return DEFAULT_FONT_SIZE;
+    }
+  });
   useEffect(()=>setShowFullJapanese(false),[unit,scope,japaneseOnly]);
-  return <section className="th-panel">
-    <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · {scope==="full"?"FULL TEXT":scope.toUpperCase()}</span>
-      <h2>{japaneseOnly?"Japanese Translation":"Reading Script"}</h2>
-      <p>{japaneseOnly ? "このUnitの日本語訳をまとめて確認できます。" : "青い単語を押すと意味と発音を表示。英文の一部を選択するか、一文をタップすると日本語訳が出ます。"}</p></header>
-    {!japaneseOnly && lesson.en && <div className="th-translation-toolbar">
-      <button type="button" className="th-small" aria-pressed={showFullJapanese} onClick={()=>setShowFullJapanese((v)=>!v)}>
-        {showFullJapanese?"全文訳を隠す":"🇯🇵 全文訳を表示"}
-      </button>
+  useEffect(()=>{
+    try {window.localStorage.setItem(FONT_SIZE_STORAGE_KEY,String(fontSize));}catch (_) {}
+  },[fontSize]);
+  const resize=(delta)=>setFontSize((current)=>Math.max(MIN_FONT_SIZE,Math.min(MAX_FONT_SIZE,current+delta)));
+  const textStyle={fontSize:fontSize+"px"};
+
+  return <section className="th-panel th-script-panel">
+    <header className="th-panel-heading th-script-heading">
+      <div className="th-script-title">
+        <span className="th-kicker">UNIT {unit} · {scope==="full"?"FULL TEXT":scope.toUpperCase()}</span>
+        <h2>{japaneseOnly?"Japanese Translation":"Reading Script"}</h2>
+      </div>
+      <div className="th-script-controls">
+        <div className="th-font-controls" role="group" aria-label="本文の文字サイズ">
+          <span className="th-font-label" aria-hidden="true">A</span>
+          <button type="button" aria-label="文字を小さく" title="文字を小さく"
+            disabled={fontSize<=MIN_FONT_SIZE} onClick={()=>resize(-2)}>−</button>
+          <output aria-label="現在の文字サイズ">{fontSize}px</output>
+          <button type="button" aria-label="文字を大きく" title="文字を大きく"
+            disabled={fontSize>=MAX_FONT_SIZE} onClick={()=>resize(2)}>＋</button>
+        </div>
+        {!japaneseOnly&&lesson.en&&<button type="button" className="th-small th-compact-translation"
+          aria-pressed={showFullJapanese} onClick={()=>setShowFullJapanese((value)=>!value)}>
+          {showFullJapanese?"全文訳を隠す":"🇯🇵 全文訳を表示"}
+        </button>}
+      </div>
+    </header>
+    {!japaneseOnly&&<p className="th-script-hint">青い単語：意味・発音　｜　英文を選択／タップ：一文の和訳</p>}
+    {!japaneseOnly&&(lesson.en
+      ? <InteractivePassage key={unit+":"+scope} text={lesson.en} words={lesson.words}
+          unit={unit} scope={scope} fontSize={fontSize}/>
+      : <p>この範囲の英文は未登録です。</p>)}
+    {(japaneseOnly||showFullJapanese)&&<div className="th-translation" style={textStyle}>
+      {lesson.ja||"日本語訳は未登録です。"}
     </div>}
-    {!japaneseOnly && (lesson.en ? <InteractivePassage key={unit+":"+scope} text={lesson.en} words={lesson.words} unit={unit} scope={scope}/> : <p>この範囲の英文は未登録です。</p>)}
-    {((japaneseOnly||showFullJapanese))&&<div className="th-translation">{lesson.ja || "日本語訳は未登録です。"}</div>}
     {japaneseOnly&&lesson.en&&<details className="th-details"><summary>英文も表示する</summary>
-      <InteractivePassage key={"ja:"+unit+":"+scope} text={lesson.en} words={lesson.words} unit={unit} scope={scope}/></details>}
+      <InteractivePassage key={"ja:"+unit+":"+scope} text={lesson.en} words={lesson.words}
+        unit={unit} scope={scope} fontSize={fontSize}/></details>}
   </section>;
 }
+
 function shuffle(arr) {
   const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;
 }
