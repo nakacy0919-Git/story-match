@@ -54,7 +54,7 @@ function summarize(unit,study,story){
 export default function LearningDashboard({unit,onOpen}) {
  const [student,setStudent]=useState(getStudent);
  const [draft,setDraft]=useState({class:"",number:"",name:""});
- const [,setRevision]=useState(0);
+ const [revision,setRevision]=useState(0);
  const [error,setError]=useState("");
  useEffect(()=>{
    const update=()=>setRevision(v=>v+1);
@@ -118,7 +118,7 @@ export default function LearningDashboard({unit,onOpen}) {
 
 
 export function ListeningMissionPanel({unit,scope,onScope}) {
- const [revision,setRevision]=useState(0);
+ const [,setRevision]=useState(0);
  useEffect(()=>{const refresh=()=>setRevision(n=>n+1);window.addEventListener(STUDY_CHANGED,refresh);return()=>window.removeEventListener(STUDY_CHANGED,refresh);},[]);
  const student=getStudent(),progress=readUnitStudy(student,unit).listening||{};
  const scopes=paragraphOptions(unit).map(x=>x.value);
