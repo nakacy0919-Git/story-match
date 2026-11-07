@@ -2,7 +2,6 @@ import { readStudy, readUnitStudy, saveListeningCompletion, saveQuizResult, save
   saveGrammarAnswer, completedListening, validStudent } from "./studyProgress";
 import { comprehensionQuestions } from "./comprehensionQuestions";
 import { progressKey, recordResult, loadProgress } from "./progress";
-import { readStoredJSON } from "./storage";
 
 const a={class:"3-2",number:"8",name:"A"}, b={class:"3-2",number:"9",name:"B"};
 beforeEach(()=>window.localStorage.clear());
