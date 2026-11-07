@@ -538,7 +538,7 @@ function App({ embedded = false, selectedUnit = null }) {
                   minPoints={rules[mode + "Points"]}
                   qCount={count}
                   onGameClear={finish}
-                  onRetry={reset}
+                  onRetry={()=>{reset();startedAt.current=Date.now();}}
                   studentInfo={student}
                 />
               )}

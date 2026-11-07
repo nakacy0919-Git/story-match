@@ -8,9 +8,10 @@ beforeEach(() => {
   window.speechSynthesis = { cancel: jest.fn(), getVoices: () => [], speak: jest.fn() };
 });
 afterEach(cleanup);
+function boot(){render(<App/>);fireEvent.click(screen.getByRole("button",{name:"Unit 1"}));fireEvent.click(screen.getByRole("button",{name:/Script.*英文の本文/}));}
 
 test("single-page Treasure Hunt workspace opens scripts and original game modes", () => {
-  render(<App />);
+  boot();
   expect(screen.getByRole("navigation", { name: "ユニットを選択" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Reading Script" })).toBeInTheDocument();
 
@@ -35,7 +36,7 @@ test("single-page Treasure Hunt workspace opens scripts and original game modes"
 });
 
 test("vocabulary and grammar are available without student registration", () => {
-  render(<App />);
+  boot();
   fireEvent.click(screen.getByRole("button", { name: /Vocabulary.*単語と4択クイズ/ }));
   expect(screen.getByRole("heading", { name: "Vocabulary Training" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /Grammar.*英文の並び替え/ }));
@@ -45,8 +46,9 @@ test("vocabulary and grammar are available without student registration", () => 
 
 test("a vocabulary word opens an anchored popup with English playback", () => {
   window.SpeechSynthesisUtterance=function(word){this.text=word;};
-  render(<App />);
+  boot();
   fireEvent.click(screen.getByRole("button",{name:"Unit 15"}));
+  fireEvent.click(screen.getByRole("button",{name:/Script.*英文の本文/}));
   fireEvent.click(screen.getAllByRole("button",{name:/crowd の意味と発音/})[0]);
   const dialog=screen.getByRole("dialog",{name:"単語の意味と発音"});
   expect(dialog).toHaveTextContent("群衆");
@@ -58,8 +60,9 @@ test("a vocabulary word opens an anchored popup with English playback", () => {
 });
 
 test("tapping a sentence opens its Japanese translation instead of pushing down the passage", async () => {
-  render(<App />);
+  boot();
   fireEvent.click(screen.getByRole("button",{name:"Unit 15"}));
+  fireEvent.click(screen.getByRole("button",{name:/Script.*英文の本文/}));
   const sentence=document.querySelector('[data-sentence-index="14"]');
   expect(sentence).toHaveTextContent("Clearly");
   fireEvent.pointerUp(sentence);
@@ -69,8 +72,9 @@ test("tapping a sentence opens its Japanese translation instead of pushing down 
 });
 
 test("full Japanese translation remains available within the Script panel", () => {
-  render(<App />);
+  boot();
   fireEvent.click(screen.getByRole("button",{name:"Unit 15"}));
+  fireEvent.click(screen.getByRole("button",{name:/Script.*英文の本文/}));
   fireEvent.click(screen.getByRole("button",{name:/全文訳を表示/}));
   expect(screen.getByRole("button",{name:"全文訳を隠す"})).toBeInTheDocument();
   expect(document.querySelector(".th-translation")).toBeInTheDocument();
@@ -78,8 +82,9 @@ test("full Japanese translation remains available within the Script panel", () =
 
 
 test("reading font size controls are compact, bounded, and retained across units",()=>{
-  render(<App />);
+  boot();
   fireEvent.click(screen.getByRole("button",{name:"Unit 15"}));
+  fireEvent.click(screen.getByRole("button",{name:/Script.*英文の本文/}));
   const paragraph=document.querySelector(".th-interactive-text");
   expect(paragraph).toHaveStyle({fontSize:"22px"});
   fireEvent.click(screen.getByRole("button",{name:"文字を大きく"}));
@@ -87,6 +92,7 @@ test("reading font size controls are compact, bounded, and retained across units
   expect(screen.getByLabelText("現在の文字サイズ")).toHaveTextContent("24px");
   expect(window.localStorage.getItem("treasure-hunt-reading-font-size")).toBe("24");
   fireEvent.click(screen.getByRole("button",{name:"Unit 14"}));
+  fireEvent.click(screen.getByRole("button",{name:/Script.*英文の本文/}));
   expect(document.querySelector(".th-interactive-text")).toHaveStyle({fontSize:"24px"});
   fireEvent.click(screen.getByRole("button",{name:"文字を小さく"}));
   expect(document.querySelector(".th-interactive-text")).toHaveStyle({fontSize:"22px"});
@@ -94,8 +100,9 @@ test("reading font size controls are compact, bounded, and retained across units
 
 test("word popup is a centered modal and shows pronunciation",()=>{
   window.SpeechSynthesisUtterance=function(word){this.text=word;};
-  render(<App />);
+  boot();
   fireEvent.click(screen.getByRole("button",{name:"Unit 15"}));
+  fireEvent.click(screen.getByRole("button",{name:/Script.*英文の本文/}));
   fireEvent.click(screen.getAllByRole("button",{name:/crowd の意味と発音/})[0]);
   const wordModal=screen.getByRole("dialog",{name:"単語の意味と発音"});
   expect(wordModal).toHaveClass("th-word-modal");
@@ -107,7 +114,7 @@ test("word popup is a centered modal and shows pronunciation",()=>{
 });
 
 test("Japanese translation uses the same adjustable font size",()=>{
-  render(<App />);
+  boot();
   fireEvent.click(screen.getByRole("button",{name:/Japanese.*日本語訳/}));
   fireEvent.click(screen.getByRole("button",{name:"文字を大きく"}));
   expect(document.querySelector(".th-translation")).toHaveStyle({fontSize:"24px"});
@@ -123,8 +130,9 @@ class ReadingDockSpeechMock {
 }
 test("Reading Check has a fixed control dock and independently scrollable English passage",()=>{
   window.SpeechRecognition=ReadingDockSpeechMock;
-  render(<App/>);
+  boot();
   fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
+  fireEvent.click(screen.getByRole("button",{name:/Script.*英文の本文/}));
   fireEvent.click(screen.getByRole("button",{name:/Reading Check.*音読判定/}));
   expect(document.querySelector(".th-stage-content")).toHaveClass("is-reading");
   expect(screen.getByRole("region",{name:"音読する英文（スクロール可能）"})).toHaveTextContent("A lucky number");
@@ -134,7 +142,7 @@ test("Reading Check has a fixed control dock and independently scrollable Englis
 });
 test("the same recording button starts and stops and updates the semicircle Accuracy result",()=>{
   window.SpeechRecognition=ReadingDockSpeechMock;
-  render(<App/>);
+  boot();
   fireEvent.click(screen.getByRole("button",{name:/Reading Check.*音読判定/}));
   fireEvent.click(screen.getByRole("button",{name:"🎙 音読スタート"}));
   expect(screen.getByRole("button",{name:"■ 終了・判定"})).toHaveAttribute("aria-pressed","true");
@@ -147,9 +155,30 @@ test("the same recording button starts and stops and updates the semicircle Accu
 });
 test("Shadowing shares the same fixed panel and single recording control",()=>{
   window.SpeechRecognition=ReadingDockSpeechMock;
-  render(<App/>);
+  boot();
   fireEvent.click(screen.getByRole("button",{name:/Shadowing.*音声に続けて音読/}));
   expect(document.querySelector(".th-stage-content")).toHaveClass("is-reading");
   expect(screen.getByRole("region",{name:"音読する英文（スクロール可能）"})).toBeInTheDocument();
   expect(document.querySelector(".th-reading-dock")).toBeInTheDocument();
+});
+
+
+test("initial screen asks users to select a unit, then opens 12-ring analytics",()=>{
+ render(<App/>);
+ expect(screen.getByText("Select a Unit")).toBeInTheDocument();
+ expect(screen.queryByRole("heading",{name:"Reading Script"})).toBeNull();
+ fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
+ expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
+ expect(document.querySelectorAll(".th-analytics-card")).toHaveLength(12);
+ expect(screen.getByText(/12項目の達成度/)).toBeInTheDocument();
+});
+
+test("personal metrics are isolated and listening counts only completed playback",()=>{
+ const student={class:"3-2",number:"6",name:"Progress Student"};
+ localStorage.setItem("storyMatchStudent",JSON.stringify(student));
+ render(<App/>);
+ fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
+ expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
+ expect(screen.getByText(/Progress Student/)).toBeInTheDocument();
+ expect(screen.getByText("P1 · 0/3")).toBeInTheDocument();
 });

@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { readStoredJSON, writeStoredJSON } from "../utils/storage";
-import { loadProgress, profileKey } from "../utils/progress";
+import { loadProgress } from "../utils/progress";
 import { STUDY_CHANGED, validStudent, readUnitStudy, completedListening, emitStudyChange } from "../utils/studyProgress";
 import { paragraphOptions } from "./TreasurePanels";
 import { allUnitsData } from "../unitsData";
-import { comprehensionQuestions } from "../utils/comprehensionQuestions";
 
 const clamp=n=>Math.max(0,Math.min(100,Math.round(Number(n)||0)));
 function Ring({value,size="small"}) {
@@ -55,7 +54,7 @@ function summarize(unit,study,story){
 export default function LearningDashboard({unit,onOpen}) {
  const [student,setStudent]=useState(getStudent);
  const [draft,setDraft]=useState({class:"",number:"",name:""});
- const [revision,setRevision]=useState(0);
+ const [,setRevision]=useState(0);
  const [error,setError]=useState("");
  useEffect(()=>{
    const update=()=>setRevision(v=>v+1);

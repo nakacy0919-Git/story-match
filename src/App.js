@@ -44,8 +44,8 @@ function App() {
   const current=buttons.find((b)=>b.id===panel)||buttons[0];
   return <main className="th-shell">
     <nav className="th-unit-strip" aria-label="ユニットを選択">
-      {units.map((n)=><button key={n} className={n===unit?"active":""}
-        aria-pressed={n===unit} onClick={()=>changeUnit(n)}>Unit {n}</button>)}
+      {units.map((n)=><button key={n} className={panel!=="welcome"&&n===unit?"active":""}
+        aria-pressed={panel!=="welcome"&&n===unit} onClick={()=>changeUnit(n)}>Unit {n}</button>)}
     </nav>
     <div className={"th-workspace "+(panel==="welcome"?"is-welcome":"")}>
       <div className="th-stage" style={{ backgroundImage: 'linear-gradient(155deg,rgba(243,248,253,.91),rgba(253,244,237,.92)),url("/treasure-cover.webp")', backgroundSize: "cover", backgroundPosition: "center" }}>
