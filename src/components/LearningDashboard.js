@@ -54,6 +54,7 @@ function summarize(unit,study,story){
 export default function LearningDashboard({unit,onOpen}) {
  const [student,setStudent]=useState(getStudent);
  const [draft,setDraft]=useState({class:"",number:"",name:""});
+ const [editing,setEditing]=useState(false);
  const [,setRevision]=useState(0);
  const [error,setError]=useState("");
  useEffect(()=>{
@@ -72,14 +73,14 @@ export default function LearningDashboard({unit,onOpen}) {
    const next={class:draft.class.trim(),number:draft.number.trim(),name:draft.name.trim()};
    if(!validStudent(next)){setError("クラス・番号・氏名を入力してください。");return;}
    if(!writeStoredJSON("storyMatchStudent",next)){setError("ブラウザに学習情報を保存できません。");return;}
-   setStudent(next);setError("");emitStudyChange();
+   setStudent(next);setEditing(false);setError("");emitStudyChange();
  };
  return <div className="th-analytics">
   <section className="th-analytics-hero">
    <div className="th-analytics-intro"><span className="th-analytics-kicker">LEARNING ANALYTICS · UNIT {unit}</span>
     <h2>Learning Progress</h2>
     <p>取り組みを数字で確認。リングを押すと練習に進めます。</p>
-    {validStudent(student)?<div className="th-learner-name">● {student.name} <span>{student.class} · {student.number}番</span></div>:
+    {validStudent(student)?<div className="th-learner-name">● {student.name} <span>{student.class} · {student.number}番</span><button className="th-switch-learner" onClick={()=>{setDraft({class:"",number:"",name:""});setEditing(true);}}>変更</button></div>:
       <span className="th-learner-name">学習記録を保存するには登録してください</span>}
    </div>
    <Ring value={details.overall} size="large"/>
@@ -89,7 +90,7 @@ export default function LearningDashboard({unit,onOpen}) {
     <button type="button" onClick={()=>onOpen("script")}>本文から学ぶ →</button>
    </div>
   </section>
-  {!validStudent(student)&&<form className="th-analytics-register" onSubmit={register} aria-label="学習者を登録">
+  {(!validStudent(student)||editing)&&<form className="th-analytics-register" onSubmit={register} aria-label="学習者を登録">
     <strong>学習記録を開始</strong>
     <input aria-label="クラス" placeholder="クラス" value={draft.class} onChange={e=>setDraft({...draft,class:e.target.value})} required maxLength={40}/>
     <input aria-label="番号" placeholder="番号" value={draft.number} onChange={e=>setDraft({...draft,number:e.target.value})} required type="number" min="1"/>
