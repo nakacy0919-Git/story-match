@@ -16,6 +16,8 @@ test("single-page Treasure Hunt workspace opens scripts and original game modes"
   expect(screen.getByRole("heading", { name: "Reading Script" })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Unit 10" }));
+  expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button",{name:/Script.*英文の本文/}));
   expect(screen.getByText("UNIT 10 · FULL TEXT")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Reading Script" })).toBeInTheDocument();
 
