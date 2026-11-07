@@ -139,8 +139,11 @@ test("the same recording button starts and stops and updates the semicircle Accu
   fireEvent.click(screen.getByRole("button",{name:"🎙 音読スタート"}));
   expect(screen.getByRole("button",{name:"■ 終了・判定"})).toHaveAttribute("aria-pressed","true");
   const expected=document.querySelector(".th-practice-text").textContent;
+  ReadingDockSpeechMock.latest.say(expected);
+  expect(screen.getByLabelText("認識された英文")).toHaveTextContent(expected.slice(0,25));
   fireEvent.click(screen.getByRole("button",{name:"■ 終了・判定"}));
   expect(screen.getByRole("button",{name:"🎙 音読スタート"})).toHaveAttribute("aria-pressed","false");
+  expect(screen.getByRole("img",{name:"Accuracy 100%"})).toBeInTheDocument();
 });
 test("Shadowing shares the same fixed panel and single recording control",()=>{
   window.SpeechRecognition=ReadingDockSpeechMock;
