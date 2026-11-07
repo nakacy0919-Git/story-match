@@ -9,10 +9,13 @@ export function loadProgress(student) {
   const records = {};
   for (const [unit, item] of Object.entries(value)) {
     if (!item || typeof item !== "object") continue;
-    const record = { reading: {}, puzzle: {} };
+    const record = { reading: {}, puzzle: {}, readingAttempts: {} };
     for (const [scene, number] of Object.entries(item.reading || {})) {
       if (Number.isFinite(number) && number >= 0 && number <= 100)
         record.reading[scene] = number;
+    }
+    for (const [scene, count] of Object.entries(item.readingAttempts || {})) {
+      if (Number.isInteger(count) && count>=0) record.readingAttempts[scene]=count;
     }
     for (const [level, result] of Object.entries(item.puzzle || {})) {
       if (Number.isFinite(result?.best) && result.best >= 0)
@@ -23,6 +26,7 @@ export function loadProgress(student) {
       if (!quiz || typeof quiz !== "object") continue;
       record[mode] = {
         ...quiz,
+        bestSeconds:Number.isFinite(quiz.bestSeconds)&&quiz.bestSeconds>=0?quiz.bestSeconds:undefined,
         bestByCount: Object.fromEntries(
           Object.entries(quiz.bestByCount || {}).filter(
             ([, n]) => Number.isFinite(n) && n >= 0,
@@ -64,6 +68,10 @@ export function recordResult(previous, unit, mode, result, options = {}) {
         ...record.reading,
         [options.scene]: Math.max(record.reading?.[options.scene] || 0, result),
       },
+      readingAttempts: {
+        ...record.readingAttempts,
+        [options.scene]: (record.readingAttempts?.[options.scene] || 0) + 1,
+      },
     };
   } else if (mode === "puzzle") {
     const old = record.puzzle?.[options.level];
@@ -90,6 +98,9 @@ export function recordResult(previous, unit, mode, result, options = {}) {
         last: result,
         count,
         fullClear: old.fullClear || count === options.total,
+        ...(mode==="random" && count===options.total && Number.isFinite(options.elapsedSeconds) ? {
+          bestSeconds:Math.min(old.bestSeconds??Infinity,options.elapsedSeconds)
+        } : {}),
       },
     };
   }

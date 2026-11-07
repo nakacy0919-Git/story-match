@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getLesson, unitKey } from "./TreasurePanels";
+import { saveListeningCompletion, readUnitStudy } from "../utils/studyProgress";
 const recordScopes = {
   1: ["full","p1","p2","p3","p4"],
   4: ["full","p1","p2","p3"],
@@ -15,6 +16,9 @@ export function treasureAudioUrl(unit,scope) {
 }
 export default function TreasureAudio({unit,scope}) {
   const [rate,setRate]=useState(0.85);
+  const [listenCount,setListenCount]=useState(0);
+  useEffect(()=>{const student=(()=>{try{return JSON.parse(window.localStorage.getItem("storyMatchStudent"));}catch(_){return null;}})();setListenCount(readUnitStudy(student,unit).listening?.[scope]||0);},[unit,scope]);
+  const completed=()=>{if(saveListeningCompletion(unit,scope))setListenCount(n=>n+1);};
   const [playing,setPlaying]=useState(false);
   const [error,setError]=useState("");
   const [source,setSource]=useState("");
@@ -39,7 +43,7 @@ export default function TreasureAudio({unit,scope}) {
       u.lang="en-US";u.rate=rate;
       const voices=window.speechSynthesis.getVoices();
       u.voice=voices.find((v)=>v.lang==="en-US")||voices.find((v)=>v.lang?.startsWith("en"))||null;
-      u.onend=()=>{spoken.current=false;setPlaying(false);};
+      u.onend=()=>{if(spoken.current)completed();spoken.current=false;setPlaying(false);};
       u.onerror=()=>{spoken.current=false;setPlaying(false);setError("音声合成に失敗しました。ブラウザで再試行してください。");};
       window.speechSynthesis.speak(u);spoken.current=true;setPlaying(true);setSource("音声合成");
     }catch(_){setError("音声合成を開始できません。");setPlaying(false);}
@@ -57,7 +61,7 @@ export default function TreasureAudio({unit,scope}) {
       const p=loop.current;
       if(p.start!==null&&p.end!==null&&a.currentTime>=p.end){a.currentTime=p.start;}
     };
-    a.onended=()=>setPlaying(false);
+    a.onended=()=>{setPlaying(false);completed();};
     a.onerror=()=>{
       if(audioRef.current===a){a.pause();audioRef.current=null;playSpeech();}
     };
@@ -83,7 +87,7 @@ export default function TreasureAudio({unit,scope}) {
     // Device speech synthesis applies the new rate on its next playback.
   };
   return <div className="th-audio">
-    <span className="th-side-heading">🎧 Audio Player</span>
+    <span className="th-side-heading">🎧 Audio Player <small>{scope==="full"?"全文":scope.toUpperCase()} {listenCount}/3 回完聴</small></span>
     <button className="th-audio-play" onClick={play}>{playing?"■ Stop Audio":"▶ Play Audio"}</button>
     <div className="th-audio-row">
       <button onClick={()=>seek(-5)} title="5秒戻る">◀ 5s</button>
