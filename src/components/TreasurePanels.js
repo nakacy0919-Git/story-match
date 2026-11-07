@@ -150,23 +150,56 @@ export function GrammarPanel({unit}) {
     </div>:<p>練習に適した英文が登録されていません。</p>}
   </section>;
 }
+function AccuracyGauge({percent}) {
+  const value=percent===null?0:Math.max(0,Math.min(100,percent));
+  const display=percent===null?"—":Math.round(value)+"%";
+  return <div className="th-reading-gauge" aria-label={"Accuracy "+display}>
+    <svg viewBox="0 0 120 85" role="img" aria-label={"Accuracy "+display} focusable="false">
+      <path className="th-gauge-track" d="M 14 66 A 46 46 0 0 1 106 66" fill="none" strokeWidth="10" strokeLinecap="round" pathLength="100"/>
+      <path className="th-gauge-fill" d="M 14 66 A 46 46 0 0 1 106 66" fill="none" strokeWidth="10" strokeLinecap="round"
+        pathLength="100" strokeDasharray={value+" 100"} />
+      <text x="60" y="61" textAnchor="middle" className="th-gauge-value">{display}</text>
+      <text x="60" y="78" textAnchor="middle" className="th-gauge-label">Accuracy</text>
+    </svg>
+  </div>;
+}
+
 export function ReadingPractice({unit,scope,shadowing=false}) {
   const lesson=getLesson(unit,scope);
   const [percent,setPercent]=useState(null),[transcript,setTranscript]=useState("");
   const mic=useReadingSpeech(lesson.en,(value,spoken)=>{setPercent(value);setTranscript(spoken);},
     score,"th:"+unit+":"+scope,80);
   useEffect(()=>{setPercent(null);setTranscript("");},[unit,scope,shadowing]);
-  return <section className="th-panel">
-    <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · {shadowing?"SHADOWING":"READING"}</span>
-      <h2>{shadowing?"Shadowing Practice":"Reading Check"}</h2>
-      <p>{shadowing?"右のモデル音声を再生し、少し遅れて英文を発話しましょう。イヤホン推奨。":"読み終わったら「終了・判定」を押してください。"}</p></header>
-    <div className="th-practice-text">{lesson.en}</div>
-    <div className="th-practice-controls"><button className="th-primary" disabled={!lesson.en||mic.phase==="scoring"}
-      onClick={()=>mic.phase==="listening"?mic.stop():mic.begin()}>
-      {mic.phase==="listening"?"■ 終了・判定":mic.phase==="scoring"?"判定中…":"🎙 音読スタート"}</button>
-      <button className="th-small" disabled={!lesson.en||mic.phase==="scoring"} onClick={()=>mic.reconnect()}>マイク再接続</button>
-      <strong className="th-score">Accuracy {percent===null?"—":percent+"%"}</strong></div>
-    <p className="th-note" role="status">{mic.status}</p>
-    <div className="th-transcript"><b>認識された英文</b><p>{mic.transcript||transcript||"ここに認識結果が表示されます。"}</p></div>
+  const isListening=mic.phase==="listening";
+  const isScoring=mic.phase==="scoring";
+  const displayTranscript=mic.transcript||transcript||"ここに認識された英文が表示されます。";
+  return <section className="th-panel th-reading-panel">
+    <header className="th-panel-heading th-reading-heading">
+      <div><span className="th-kicker">UNIT {unit} · {shadowing?"SHADOWING":"READING"}</span>
+        <h2>{shadowing?"Shadowing Practice":"Reading Check"}</h2></div>
+      <p>{shadowing?"右のモデル音声に続けて発話しましょう。イヤホンを推奨します。":"本文はここだけスクロール。下のボタンで音読開始／終了・判定を切り替えます。"}</p>
+    </header>
+    <div className="th-reading-scroll" role="region" aria-label="音読する英文（スクロール可能）" tabIndex={0}>
+      <div className="th-practice-text">{lesson.en||"この範囲の英文は登録されていません。"}</div>
+    </div>
+    <footer className="th-reading-dock" aria-label="音読の操作と評価">
+      <div className="th-reading-dock-left">
+        <div className="th-reading-dock-actions">
+          <button type="button" className={"th-primary th-record-toggle"+(isListening?" is-recording":"")}
+            disabled={!lesson.en||isScoring} aria-pressed={isListening}
+            onClick={()=>isListening?mic.stop():mic.begin()}>
+            {isListening?"■ 終了・判定":isScoring?"判定中…":"🎙 音読スタート"}
+          </button>
+          <button type="button" className="th-small th-reconnect" disabled={!lesson.en||isScoring}
+            onClick={()=>{setPercent(null);setTranscript("");mic.reconnect();}}>マイク再接続</button>
+        </div>
+        <p className="th-reading-status" role="status" title={mic.status}>{mic.status}</p>
+        <div className="th-reading-transcript">
+          <span className="th-transcript-title">文字起こし <span>{isListening?"● 認識中":isScoring?"判定中":percent===null?"待機中":"判定完了"}</span></span>
+          <p aria-label="認識された英文">{displayTranscript}</p>
+        </div>
+      </div>
+      <AccuracyGauge percent={percent}/>
+    </footer>
   </section>;
 }

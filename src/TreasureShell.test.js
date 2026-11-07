@@ -112,3 +112,41 @@ test("Japanese translation uses the same adjustable font size",()=>{
   fireEvent.click(screen.getByRole("button",{name:"文字を大きく"}));
   expect(document.querySelector(".th-translation")).toHaveStyle({fontSize:"24px"});
 });
+
+
+class ReadingDockSpeechMock {
+  constructor(){ReadingDockSpeechMock.latest=this;}
+  start(){this.onstart?.();}
+  stop(){this.onend?.();}
+  abort(){}
+  say(text){const result=[{transcript:text}];result.isFinal=true;this.onresult?.({results:[result],resultIndex:0});}
+}
+test("Reading Check has a fixed control dock and independently scrollable English passage",()=>{
+  window.SpeechRecognition=ReadingDockSpeechMock;
+  render(<App/>);
+  fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
+  fireEvent.click(screen.getByRole("button",{name:/Reading Check.*音読判定/}));
+  expect(document.querySelector(".th-stage-content")).toHaveClass("is-reading");
+  expect(screen.getByRole("region",{name:"音読する英文（スクロール可能）"})).toHaveTextContent("A lucky number");
+  expect(document.querySelector(".th-reading-dock")).toBeInTheDocument();
+  expect(screen.getByRole("img",{name:"Accuracy —"})).toBeInTheDocument();
+  expect(screen.getByRole("button",{name:"🎙 音読スタート"})).toBeInTheDocument();
+});
+test("the same recording button starts and stops and updates the semicircle Accuracy result",()=>{
+  window.SpeechRecognition=ReadingDockSpeechMock;
+  render(<App/>);
+  fireEvent.click(screen.getByRole("button",{name:/Reading Check.*音読判定/}));
+  fireEvent.click(screen.getByRole("button",{name:"🎙 音読スタート"}));
+  expect(screen.getByRole("button",{name:"■ 終了・判定"})).toHaveAttribute("aria-pressed","true");
+  const expected=document.querySelector(".th-practice-text").textContent;
+  fireEvent.click(screen.getByRole("button",{name:"■ 終了・判定"}));
+  expect(screen.getByRole("button",{name:"🎙 音読スタート"})).toHaveAttribute("aria-pressed","false");
+});
+test("Shadowing shares the same fixed panel and single recording control",()=>{
+  window.SpeechRecognition=ReadingDockSpeechMock;
+  render(<App/>);
+  fireEvent.click(screen.getByRole("button",{name:/Shadowing.*音声に続けて音読/}));
+  expect(document.querySelector(".th-stage-content")).toHaveClass("is-reading");
+  expect(screen.getByRole("region",{name:"音読する英文（スクロール可能）"})).toBeInTheDocument();
+  expect(document.querySelector(".th-reading-dock")).toBeInTheDocument();
+});
