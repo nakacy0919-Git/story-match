@@ -190,7 +190,8 @@ test("personal metrics are isolated and listening counts only completed playback
  fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
  expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
  expect(screen.getByText(/Progress Student/)).toBeInTheDocument();
- expect(screen.getByText("P1 · 0/3")).toBeInTheDocument();
+ expect(screen.getByRole("button",{name:/段落リスニング 0% 練習へ/})).toBeInTheDocument();
+ expect(document.querySelector(".th-analytics-listening")).toBeNull();
 });
 
 
