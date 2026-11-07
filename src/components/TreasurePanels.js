@@ -5,6 +5,7 @@ import { useReadingSpeech } from "../utils/useReadingSpeech";
 import { score } from "../utils/readingScore";
 import { saveQuizResult, saveReadingResult, saveGrammarAnswer } from "../utils/studyProgress";
 import { comprehensionQuestions } from "../utils/comprehensionQuestions";
+import { GlossaryText, WordHelpModal, playAnswerSound, AnswerCelebration } from "./ComprehensionHelpers";
 import InteractivePassage from "./InteractivePassage";
 
 export const unitKey = (u) => "U" + String(u).padStart(2, "0") + "_P1";
@@ -145,35 +146,122 @@ export function VocabularyPanel({unit,initialDirection="enJa"}) {
  </section>;
 }
 export function ComprehensionPanel({unit,initialLanguage="en"}) {
- const [language,setLanguage]=useState(initialLanguage),[questions,setQuestions]=useState([]),[index,setIndex]=useState(0),
- [answered,setAnswered]=useState(null),[correct,setCorrect]=useState(0),[finished,setFinished]=useState(false);
- useEffect(()=>{setLanguage(initialLanguage);setQuestions(comprehensionQuestions(unit,initialLanguage));setIndex(0);setAnswered(null);setCorrect(0);setFinished(false);},[unit,initialLanguage]);
- const restart=(lang=language)=>{setLanguage(lang);setQuestions(comprehensionQuestions(unit,lang));setIndex(0);setCorrect(0);setAnswered(null);setFinished(false);};
+ const [language,setLanguage]=useState(initialLanguage),[questions,setQuestions]=useState([]),
+ [index,setIndex]=useState(0),[answered,setAnswered]=useState(null),
+ [correct,setCorrect]=useState(0),[finished,setFinished]=useState(false);
+ const [wordHelp,setWordHelp]=useState(null),[celebration,setCelebration]=useState(null);
+ const [soundOn,setSoundOn]=useState(()=>{
+   try{return window.localStorage.getItem("treasureComprehensionSound")!=="off";}catch(_){return true;}
+ });
+ const lesson=getLesson(unit);
+ useEffect(()=>{
+   setLanguage(initialLanguage);setQuestions(comprehensionQuestions(unit,initialLanguage));
+   setIndex(0);setAnswered(null);setCorrect(0);setFinished(false);
+   setWordHelp(null);setCelebration(null);
+ },[unit,initialLanguage]);
+ useEffect(()=>{
+   if(!celebration)return undefined;
+   const timer=window.setTimeout(()=>setCelebration(null),1350);
+   return ()=>window.clearTimeout(timer);
+ },[celebration]);
+ useEffect(()=>{
+   if(!wordHelp)return undefined;
+   const handleKey=event=>{if(event.key==="Escape")setWordHelp(null);};
+   document.addEventListener("keydown",handleKey);
+   return ()=>document.removeEventListener("keydown",handleKey);
+ },[wordHelp]);
+ const restart=(lang=language)=>{
+   setLanguage(lang);setQuestions(comprehensionQuestions(unit,lang));
+   setIndex(0);setCorrect(0);setAnswered(null);setFinished(false);setCelebration(null);setWordHelp(null);
+ };
  const q=questions[index];
  const choose=value=>{
-   if(answered!==null)return;
-   setAnswered(value);const next=correct+(value===q.correct?1:0);setCorrect(next);
-   if(index===questions.length-1)saveQuizResult(unit,"comprehension",language,100*next/questions.length);
+   if(answered!==null || celebration || !q)return;
+   const isCorrect=value===q.correct;
+   setAnswered(value);
+   const next=correct+(isCorrect?1:0);
+   setCorrect(next);
+   playAnswerSound(isCorrect,soundOn);
+   setCelebration({correct:isCorrect,question:index});
+   if(index===questions.length-1 && questions.length) {
+     saveQuizResult(unit,"comprehension",language,100*next/questions.length);
+   }
  };
- return <section className="th-panel">
-   <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · READING COMPREHENSION</span>
-    <h2>内容理解 Check</h2><p>英文・日本語の2コースをそれぞれ練習できます。</p></header>
-   <div className="th-actions"><button className="th-primary" onClick={()=>restart("en")}>English Questions</button>
-     <button className="th-primary" onClick={()=>restart("ja")}>日本語の問題</button></div>
-   {finished?<div className="th-quiz-card"><h3>{correct} / {questions.length} 問正解</h3>
-     <p>正解率 {Math.round(100*correct/questions.length)}%</p>
-     <button className="th-primary" onClick={()=>restart()}>もう一度挑戦</button></div>:
-   q?<div className="th-quiz-card"><span className="th-kicker">QUESTION {index+1} / {questions.length}</span>
-     <h3 className="th-comprehension-prompt">{q.prompt}</h3>
-     <div className="th-choice-grid">{q.options.map((option,i)=><button key={i}
-       className={"th-choice "+(answered!==null?(option===q.correct?"correct":option===answered?"incorrect":""):"")}
-       disabled={answered!==null} onClick={()=>choose(option)}>{option}</button>)}</div>
-     {answered!==null&&<div className="th-feedback"><strong>{answered===q.correct?"✓ 正解！":"正解："+q.correct}</strong>
-       <button className="th-primary" onClick={()=>{if(index===questions.length-1)setFinished(true);else{setIndex(index+1);setAnswered(null);}}}>
-        {index===questions.length-1?"結果へ":"次の問題 →"}</button></div>}
-     </div>:<p>このUnitの内容問題は準備中です。</p>}
+ const next=()=>{
+   if(celebration)return;
+   setWordHelp(null);
+   if(index===questions.length-1)setFinished(true);
+   else{setIndex(i=>i+1);setAnswered(null);}
+ };
+ const toggleSound=()=>{
+   setSoundOn(prev=>{
+     const value=!prev;
+     try{window.localStorage.setItem("treasureComprehensionSound",value?"on":"off");}catch(_){}
+     return value;
+   });
+ };
+ return <section className="th-panel th-comprehension-panel">
+   <header className="th-panel-heading th-comprehension-heading">
+     <div><span className="th-kicker">UNIT {unit} · READING COMPREHENSION</span>
+       <h2>内容理解 Check</h2><p>英文・日本語の理解度を、重要文と本文の根拠から確認します。</p></div>
+     <div className="th-comprehension-toolbar">
+       <div className="th-comprehension-tabs" role="group" aria-label="問題の言語">
+         <button type="button" aria-pressed={language==="en"} onClick={()=>restart("en")}>English</button>
+         <button type="button" aria-pressed={language==="ja"} onClick={()=>restart("ja")}>日本語</button>
+       </div>
+       <button type="button" className="th-sound-toggle" aria-label="クイズの効果音を切り替え"
+         aria-pressed={soundOn} title={soundOn?"効果音 ON":"効果音 OFF"}
+         onClick={toggleSound}>{soundOn?"🔊":"🔇"}</button>
+     </div>
+   </header>
+   {finished?<div className="th-comp-results" role="status">
+      <span className="th-kicker">COMPREHENSION RESULT · {language==="en"?"ENGLISH":"JAPANESE"}</span>
+      <h3>{Math.round(correct*100/questions.length)}%</h3>
+      <p>{correct} / {questions.length}問正解</p>
+      <button type="button" className="th-primary" onClick={()=>restart()}>もう一度挑戦</button>
+   </div>:
+   q?<div className="th-comprehension-quiz">
+      <div className="th-comprehension-progress">
+        <span>QUESTION <strong>{index+1}</strong> / {questions.length}</span>
+        <span>{language==="en"?"ENGLISH":"日本語"} · {q.type==="fact"?"内容理解":"重要文"}</span>
+      </div>
+      <div className="th-comp-progress-track" aria-hidden="true">
+        <div style={{width:((index+(answered!==null?1:0))*100/questions.length)+"%"}}/>
+      </div>
+      <h3 className="th-comp-question">
+        <GlossaryText key={unit+":"+language+":"+index} text={q.prompt} words={lesson.words} onOpen={setWordHelp}/>
+      </h3>
+      <p className="th-comp-hint">青い英単語はタップして日本語の意味を確認できます。</p>
+      <div className="th-comprehension-options">
+        {q.options.map((option,i)=><div key={i} role="button" tabIndex={answered!==null?-1:0}
+          aria-disabled={answered!==null} aria-label={"選択肢 "+(i+1)+": "+option}
+          className={"th-choice th-comprehension-choice "+(answered!==null?(option===q.correct?"correct":option===answered?"incorrect":""):"")}
+          onClick={()=>choose(option)}
+          onKeyDown={event=>{
+            if(event.target!==event.currentTarget)return;
+            if(event.key==="Enter"||event.key===" "){event.preventDefault();choose(option);}
+          }}>
+          <span className="th-choice-letter" aria-hidden="true">{String.fromCharCode(65+i)}</span>
+          <span><GlossaryText text={option} words={lesson.words} onOpen={setWordHelp}/></span>
+        </div>)}
+      </div>
+      {answered!==null&&<div className="th-comp-response">
+        <div className="th-comp-response-heading"><strong>{answered===q.correct?"✓ 正解！":"正解："+q.correct}</strong>
+          <button type="button" className="th-primary" disabled={!!celebration} onClick={next}>
+            {index===questions.length-1?"結果を見る":"次の問題 →"}
+          </button>
+        </div>
+        {q.source?.en&&<details className="th-comp-source">
+          <summary>📖 本文の根拠を確認 <small>{q.source.reference}</small></summary>
+          <p>{q.source.en}</p>{q.source.ja&&<p>{q.source.ja}</p>}
+        </details>}
+      </div>}
+    </div>:<p>このUnitの内容問題は準備中です。</p>}
+   <WordHelpModal word={wordHelp} onClose={()=>setWordHelp(null)}/>
+   <AnswerCelebration result={celebration}/>
  </section>;
 }
+
 export function GrammarPanel({unit}) {
   const sentences=useMemo(()=>(allUnitsData[unit]||[]).map((x)=>x.en)
     .filter((s)=>s.split(/\s+/).length>=5&&s.split(/\s+/).length<=16).slice(0,10),[unit]);
