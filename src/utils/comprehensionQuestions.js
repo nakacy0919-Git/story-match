@@ -58,7 +58,7 @@ function sourceChecks(unit,language) {
 export function comprehensionQuestions(unit,language="en") {
  const isEnglish=language==="en";
  const original=(curated[unit]||[]);
- const knowledge=original.map(([sourceIndex,enPrompt,jaPrompt,...choices],index)=>{
+ const knowledge=original.map(([sourceIndex,enPrompt,jaPrompt,choices],index)=>{
    const source=sourcePair(unit,sourceIndex);
    const options=choices.map(pair=>isEnglish?pair[0]:pair[1]);
    return {
