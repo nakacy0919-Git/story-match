@@ -3,6 +3,8 @@ import { unitScripts, unitTranslations, unitVocab } from "../treasureData";
 import { allUnitsData } from "../unitsData";
 import { useReadingSpeech } from "../utils/useReadingSpeech";
 import { score } from "../utils/readingScore";
+import { saveQuizResult, saveReadingResult, saveGrammarAnswer } from "../utils/studyProgress";
+import { comprehensionQuestions } from "../utils/comprehensionQuestions";
 import InteractivePassage from "./InteractivePassage";
 
 export const unitKey = (u) => "U" + String(u).padStart(2, "0") + "_P1";
@@ -91,37 +93,86 @@ function useBest(key) {
   const save=(n)=>setBest((old)=>{const next=Math.max(old,n);try{localStorage.setItem(key,String(next));}catch(_){}return next;});
   return [best,save];
 }
-export function VocabularyPanel({unit}) {
-  const words=useMemo(()=>getLesson(unit).words.filter((v)=>v.word&&v.meaning),[unit]);
-  const pool=useMemo(()=>[...new Set(Object.values(unitVocab).flat().map((v)=>v.meaning).filter(Boolean))],[]);
-  const [mode,setMode]=useState("study"),[questions,setQuestions]=useState([]),[index,setIndex]=useState(0),
-    [answered,setAnswered]=useState(null),[correct,setCorrect]=useState(0);
-  const [best,saveBest]=useBest("th-vocab-best:"+unit);
-  useEffect(()=>{setMode("study");setIndex(0);setAnswered(null);setCorrect(0);},[unit]);
-  const start=()=>{setQuestions(shuffle(words).map((word)=>({...word,choices:shuffle([word.meaning,...shuffle(pool.filter((x)=>x!==word.meaning)).slice(0,3)])})));
-    setCorrect(0);setIndex(0);setAnswered(null);setMode("quiz");};
-  const q=questions[index];
-  const choose=(choice)=>{if(answered!==null)return;setAnswered(choice);
-    const n=correct+(choice===q.meaning?1:0);setCorrect(n);
-    if(index===questions.length-1)saveBest(Math.round(100*n/questions.length));};
-  return <section className="th-panel">
-    <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · VOCABULARY</span><h2>Vocabulary Training</h2>
-      <p>{words.length}語の学習 · ベスト正解率 {best}%</p></header>
-    <div className="th-actions"><button className="th-small" onClick={()=>setMode("study")}>単語一覧</button>
-      <button className="th-primary" onClick={start} disabled={!words.length}>4択クイズ</button></div>
-    {mode==="study"?<div className="th-word-grid">{words.map((v,i)=><div className="th-word-card" key={v.word+i}>
-      <b>{v.word}</b><span>{v.pronunciation||v.pron||""}</span><p>{v.meaning}</p></div>)}</div>
-    :mode==="result"?<div className="th-quiz-card"><h3>{correct} / {questions.length} 問正解</h3>
-      <p>正解率 {Math.round(correct/questions.length*100)}%</p><button className="th-primary" onClick={start}>再挑戦</button></div>
-    :q?<div className="th-quiz-card"><span className="th-kicker">QUESTION {index+1} / {questions.length}</span><h3>{q.word}</h3>
-      <p>正しい日本語の意味を選んでください。</p>
-      <div className="th-choice-grid">{q.choices.map((x,i)=><button key={i} disabled={answered!==null}
-        className={"th-choice "+(answered!==null?(x===q.meaning?"correct":x===answered?"incorrect":""):"")}
-        onClick={()=>choose(x)}>{x}</button>)}</div>
-      {answered!==null&&<div className="th-feedback"><strong>{answered===q.meaning?"✓ 正解！":"正解："+q.meaning}</strong>
-        <button className="th-primary" onClick={()=>{if(index===questions.length-1)setMode("result");else{setIndex(index+1);setAnswered(null);}}}>
-          {index===questions.length-1?"結果へ":"次の問題 →"}</button></div>}</div>:<p>このUnitの単語は未登録です。</p>}
-  </section>;
+export function VocabularyPanel({unit,initialDirection="enJa"}) {
+ const words=useMemo(()=>getLesson(unit).words.filter(v=>v.word&&v.meaning),[unit]);
+ const pool=useMemo(()=>[...new Set(Object.values(unitVocab).flat().map(v=>v.meaning).filter(Boolean))],[]);
+ const englishPool=useMemo(()=>[...new Set(Object.values(unitVocab).flat().map(v=>v.word).filter(Boolean))],[]);
+ const [direction,setDirection]=useState(initialDirection);
+ const [mode,setMode]=useState("study"),[questions,setQuestions]=useState([]),[index,setIndex]=useState(0),
+ [answered,setAnswered]=useState(null),[correct,setCorrect]=useState(0);
+ useEffect(()=>{setDirection(initialDirection);setMode("study");setIndex(0);setAnswered(null);setCorrect(0);},[unit,initialDirection]);
+ const startQuiz=(dir=direction)=>{
+   const selected=shuffle(words);
+   setQuestions(selected.map(word=>{
+     const reverse=dir==="jaEn",correctAnswer=reverse?word.word:word.meaning;
+     const list=reverse?englishPool:pool;
+     return {prompt:reverse?word.meaning:word.word,correct:correctAnswer,
+       choices:shuffle([correctAnswer,...shuffle(list.filter(x=>x!==correctAnswer)).slice(0,3)])};
+   }));
+   setDirection(dir);setCorrect(0);setAnswered(null);setIndex(0);setMode("quiz");
+ };
+ const q=questions[index];
+ const choose=value=>{
+   if(answered!==null)return;
+   setAnswered(value);
+   const next=correct+(value===q.correct?1:0);
+   setCorrect(next);
+   if(index===questions.length-1&&questions.length)saveQuizResult(unit,"vocabulary",direction,100*next/questions.length);
+ };
+ return <section className="th-panel">
+  <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · VOCABULARY</span>
+   <h2>Vocabulary Training</h2><p>{words.length}語 · 双方向の意味確認</p></header>
+  <div className="th-actions">
+   <button className="th-small" onClick={()=>setMode("study")}>単語一覧</button>
+   <button className="th-primary" disabled={!words.length} onClick={()=>startQuiz("enJa")}>英語 → 日本語</button>
+   <button className="th-primary" disabled={!words.length} onClick={()=>startQuiz("jaEn")}>日本語 → 英語</button>
+  </div>
+  {mode==="study"?<div className="th-word-grid">{words.map((w,i)=><div className="th-word-card" key={w.word+i}>
+   <b>{w.word}</b><p>{w.meaning}</p></div>)}</div>:
+   mode==="result"?<div className="th-quiz-card"><h3>{correct} / {questions.length}問正解</h3>
+    <p>正解率 {Math.round(100*correct/questions.length)}%</p>
+    <button className="th-primary" onClick={()=>startQuiz()}>もう一度</button></div>:
+   q?<div className="th-quiz-card">
+    <span className="th-kicker">QUESTION {index+1} / {questions.length} · {direction==="enJa"?"EN → JP":"JP → EN"}</span>
+    <h3>{q.prompt}</h3><p>対応する意味・単語を選んでください。</p>
+    <div className="th-choice-grid">{q.choices.map((choice,i)=><button key={i} disabled={answered!==null}
+      className={"th-choice "+(answered!==null?(choice===q.correct?"correct":choice===answered?"incorrect":""):"")}
+      onClick={()=>choose(choice)}>{choice}</button>)}</div>
+    {answered!==null&&<div className="th-feedback"><strong>{answered===q.correct?"✓ 正解！":"正解："+q.correct}</strong>
+      <button className="th-primary" onClick={()=>{if(index===questions.length-1)setMode("result");else{setIndex(index+1);setAnswered(null);}}}>
+       {index===questions.length-1?"結果へ":"次の問題 →"}</button></div>}
+   </div>:<p>問題は登録されていません。</p>}
+ </section>;
+}
+export function ComprehensionPanel({unit,initialLanguage="en"}) {
+ const [language,setLanguage]=useState(initialLanguage),[questions,setQuestions]=useState([]),[index,setIndex]=useState(0),
+ [answered,setAnswered]=useState(null),[correct,setCorrect]=useState(0),[finished,setFinished]=useState(false);
+ useEffect(()=>{setLanguage(initialLanguage);setQuestions(comprehensionQuestions(unit,initialLanguage));setIndex(0);setAnswered(null);setCorrect(0);setFinished(false);},[unit,initialLanguage]);
+ const restart=(lang=language)=>{setLanguage(lang);setQuestions(comprehensionQuestions(unit,lang));setIndex(0);setCorrect(0);setAnswered(null);setFinished(false);};
+ const q=questions[index];
+ const choose=value=>{
+   if(answered!==null)return;
+   setAnswered(value);const next=correct+(value===q.correct?1:0);setCorrect(next);
+   if(index===questions.length-1)saveQuizResult(unit,"comprehension",language,100*next/questions.length);
+ };
+ return <section className="th-panel">
+   <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · READING COMPREHENSION</span>
+    <h2>内容理解 Check</h2><p>英文・日本語の2コースをそれぞれ練習できます。</p></header>
+   <div className="th-actions"><button className="th-primary" onClick={()=>restart("en")}>English Questions</button>
+     <button className="th-primary" onClick={()=>restart("ja")}>日本語の問題</button></div>
+   {finished?<div className="th-quiz-card"><h3>{correct} / {questions.length} 問正解</h3>
+     <p>正解率 {Math.round(100*correct/questions.length)}%</p>
+     <button className="th-primary" onClick={()=>restart()}>もう一度挑戦</button></div>:
+   q?<div className="th-quiz-card"><span className="th-kicker">QUESTION {index+1} / {questions.length}</span>
+     <h3 className="th-comprehension-prompt">{q.prompt}</h3>
+     <div className="th-choice-grid">{q.options.map((option,i)=><button key={i}
+       className={"th-choice "+(answered!==null?(option===q.correct?"correct":option===answered?"incorrect":""):"")}
+       disabled={answered!==null} onClick={()=>choose(option)}>{option}</button>)}</div>
+     {answered!==null&&<div className="th-feedback"><strong>{answered===q.correct?"✓ 正解！":"正解："+q.correct}</strong>
+       <button className="th-primary" onClick={()=>{if(index===questions.length-1)setFinished(true);else{setIndex(index+1);setAnswered(null);}}}>
+        {index===questions.length-1?"結果へ":"次の問題 →"}</button></div>}
+     </div>:<p>このUnitの内容問題は準備中です。</p>}
+ </section>;
 }
 export function GrammarPanel({unit}) {
   const sentences=useMemo(()=>(allUnitsData[unit]||[]).map((x)=>x.en)
@@ -133,7 +184,7 @@ export function GrammarPanel({unit}) {
   const words=useMemo(()=>sentence.split(/\s+/).filter(Boolean),[sentence]);
   const positions=useMemo(()=>{const a=shuffle(words.map((_,i)=>i));return a.every((n,i)=>n===i)?a.reverse():a;},[words]);
   const correct=picked.length===words.length&&picked.every((n,i)=>n===i);
-  const check=()=>{if(checked)return;setChecked(true);if(correct){setSolved((old)=>{const next=[...new Set([...old,index])];saveBest(next.length);return next;});}};
+  const check=()=>{if(checked)return;setChecked(true);saveGrammarAnswer(unit,index,correct,sentences.length);if(correct){setSolved((old)=>{const next=[...new Set([...old,index])];saveBest(next.length);return next;});}};
   return <section className="th-panel">
     <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · GRAMMAR</span><h2>Sentence Builder</h2>
       <p>実際の本文を使った語順並び替え練習 · ベスト {best} 問正解</p></header>
@@ -167,7 +218,7 @@ function AccuracyGauge({percent}) {
 export function ReadingPractice({unit,scope,shadowing=false}) {
   const lesson=getLesson(unit,scope);
   const [percent,setPercent]=useState(null),[transcript,setTranscript]=useState("");
-  const mic=useReadingSpeech(lesson.en,(value,spoken)=>{setPercent(value);setTranscript(spoken);},
+  const mic=useReadingSpeech(lesson.en,(value,spoken)=>{setPercent(value);setTranscript(spoken);saveReadingResult(unit,scope,shadowing,value);},
     score,"th:"+unit+":"+scope,80);
   useEffect(()=>{setPercent(null);setTranscript("");},[unit,scope,shadowing]);
   const isListening=mic.phase==="listening";
