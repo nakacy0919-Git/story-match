@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import App from "./App";
 
@@ -139,7 +139,7 @@ test("the same recording button starts and stops and updates the semicircle Accu
   fireEvent.click(screen.getByRole("button",{name:"🎙 音読スタート"}));
   expect(screen.getByRole("button",{name:"■ 終了・判定"})).toHaveAttribute("aria-pressed","true");
   const expected=document.querySelector(".th-practice-text").textContent;
-  ReadingDockSpeechMock.latest.say(expected);
+  act(()=>ReadingDockSpeechMock.latest.say(expected));
   expect(screen.getByLabelText("認識された英文")).toHaveTextContent(expected.slice(0,25));
   fireEvent.click(screen.getByRole("button",{name:"■ 終了・判定"}));
   expect(screen.getByRole("button",{name:"🎙 音読スタート"})).toHaveAttribute("aria-pressed","false");
