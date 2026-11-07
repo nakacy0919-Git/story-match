@@ -6,6 +6,7 @@ import { score } from "../utils/readingScore";
 import { saveQuizResult, saveReadingResult, saveGrammarAnswer } from "../utils/studyProgress";
 import { comprehensionQuestions } from "../utils/comprehensionQuestions";
 import { GlossaryText, WordHelpModal, playAnswerSound, AnswerCelebration } from "./ComprehensionHelpers";
+import "../ComprehensionEffects.css";
 import InteractivePassage from "./InteractivePassage";
 
 export const unitKey = (u) => "U" + String(u).padStart(2, "0") + "_P1";
