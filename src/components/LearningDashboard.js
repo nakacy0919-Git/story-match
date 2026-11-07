@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { readStoredJSON, writeStoredJSON } from "../utils/storage";
 import { loadProgress } from "../utils/progress";
 import { STUDY_CHANGED, validStudent, readUnitStudy, completedListening, emitStudyChange } from "../utils/studyProgress";
@@ -54,7 +54,7 @@ function summarize(unit,study,story){
 export default function LearningDashboard({unit,onOpen}) {
  const [student,setStudent]=useState(getStudent);
  const [draft,setDraft]=useState({class:"",number:"",name:""});
- const [revision,setRevision]=useState(0);
+ const [,setRevision]=useState(0);
  const [error,setError]=useState("");
  useEffect(()=>{
    const update=()=>setRevision(v=>v+1);
@@ -62,11 +62,11 @@ export default function LearningDashboard({unit,onOpen}) {
    window.addEventListener("storage",update);
    return ()=>{window.removeEventListener(STUDY_CHANGED,update);window.removeEventListener("storage",update);};
  },[]);
- const details=useMemo(()=>{
+ const details=(()=>{
    const record=validStudent(student)?readUnitStudy(student,unit):{};
    const story=validStudent(student)?(loadProgress(student)[unit]||{}):{};
    return summarize(unit,record,story);
- },[unit,student,revision]);
+ })();
  const register=(event)=>{
    event.preventDefault();
    const next={class:draft.class.trim(),number:draft.number.trim(),name:draft.name.trim()};
