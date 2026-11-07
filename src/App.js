@@ -48,7 +48,7 @@ function App() {
             <strong>{current.icon} {current.name}</strong></div>
           <div className="th-stage-sub">{scope==="full"?"Full Text":"Paragraph "+scope.slice(1)}</div>
         </div>
-        <div className={"th-stage-content "+(panel==="story"?"is-story":"")}>
+        <div className={"th-stage-content "+(panel==="story"?"is-story":panel==="reading"||panel==="shadowing"?"is-reading":"")}>
           {panel==="script"&&<ScriptPanel unit={unit} scope={scope}/>}
           {panel==="japanese"&&<ScriptPanel unit={unit} scope={scope} japaneseOnly/>}
           {panel==="vocabulary"&&<VocabularyPanel unit={unit}/>}
