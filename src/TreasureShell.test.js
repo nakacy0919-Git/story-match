@@ -236,3 +236,27 @@ test("correct and wrong choices show fullscreen overlays without changing score 
   expect(screen.getByText("CORRECT!")).toBeInTheDocument();
   expect(document.querySelector(".th-answer-overlay")).toHaveClass("is-correct");
 });
+
+
+test("incorrect answers show a full-screen feedback overlay and source evidence remains available",()=>{
+ const student={class:"3-2",number:"13",name:"Incorrect Student"};
+ localStorage.setItem("storyMatchStudent",JSON.stringify(student));
+ render(<App/>);
+ fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
+ fireEvent.click(screen.getByRole("button",{name:/内容把握 EN 0% 練習へ/}));
+ fireEvent.click(screen.getByRole("button",{name:/選択肢 .*Only on school uniforms/}));
+ expect(screen.getByText("NOT QUITE")).toBeInTheDocument();
+ expect(document.querySelector(".th-answer-overlay")).toHaveClass("is-incorrect");
+ expect(screen.getByText(/正解：On license plates and phone numbers/)).toBeInTheDocument();
+ expect(screen.getByText(/本文の根拠を確認/)).toBeInTheDocument();
+});
+test("quiz sound can be muted before answering and stays off after navigation",()=>{
+ render(<App/>);
+ fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
+ fireEvent.click(screen.getByRole("button",{name:/Comprehension.*内容理解 EN/}));
+ const toggle=screen.getByRole("button",{name:"クイズの効果音を切り替え"});
+ expect(toggle).toHaveAttribute("aria-pressed","true");
+ fireEvent.click(toggle);
+ expect(toggle).toHaveAttribute("aria-pressed","false");
+ expect(localStorage.getItem("treasureComprehensionSound")).toBe("off");
+});
