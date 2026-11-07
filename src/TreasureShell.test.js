@@ -173,6 +173,14 @@ test("initial screen asks users to select a unit, then opens 12-ring analytics",
  expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
  expect(document.querySelectorAll(".th-analytics-card")).toHaveLength(12);
  expect(screen.getByText(/12項目の達成度/)).toBeInTheDocument();
+ expect(document.querySelectorAll(".th-analytics-group")).toHaveLength(3);
+ document.querySelectorAll(".th-analytics-group").forEach(group=>{
+   expect(group.querySelectorAll(".th-analytics-card")).toHaveLength(4);
+ });
+ expect(document.querySelectorAll(".th-activity-icon svg")).toHaveLength(12);
+ expect(document.querySelector(".th-analytics-listening")).toBeNull();
+ expect(document.querySelector(".th-stage-top")).toBeNull();
+ expect(screen.getAllByRole("heading",{name:"Learning Progress"})).toHaveLength(1);
 });
 
 test("personal metrics are isolated and listening counts only completed playback",()=>{
@@ -183,4 +191,21 @@ test("personal metrics are isolated and listening counts only completed playback
  expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
  expect(screen.getByText(/Progress Student/)).toBeInTheDocument();
  expect(screen.getByText("P1 · 0/3")).toBeInTheDocument();
+});
+
+
+test("every metric keeps its click action after the four-column layout redesign",()=>{
+ const student={class:"3-2",number:"9",name:"Card Student"};
+ localStorage.setItem("storyMatchStudent",JSON.stringify(student));
+ render(<App/>);
+ fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
+ const cards=document.querySelectorAll(".th-analytics-group");
+ expect(cards[0].getAttribute("data-tone")).toBe("sky");
+ expect(cards[1].getAttribute("data-tone")).toBe("teal");
+ expect(cards[2].getAttribute("data-tone")).toBe("violet");
+ fireEvent.click(screen.getByRole("button",{name:/段落リスニング 0% 練習へ/}));
+ expect(screen.getByRole("heading",{name:"Listening Mission"})).toBeInTheDocument();
+ fireEvent.click(screen.getByRole("button",{name:/Learning Progress.*進捗を分析/}));
+ fireEvent.click(screen.getByRole("button",{name:/内容把握 EN 0% 練習へ/}));
+ expect(screen.getByRole("heading",{name:"内容理解 Check"})).toBeInTheDocument();
 });
