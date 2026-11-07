@@ -116,3 +116,26 @@ export default function LearningDashboard({unit,onOpen}) {
   <p className="th-analytics-footnote">現在の端末・ブラウザに個人別で保存。過去の記録がない項目は0%、旧形式にない回数は0回として表示します。Story Matchの既存ベスト記録は引き継ぎます。</p>
  </div>;
 }
+
+
+export function ListeningMissionPanel({unit,scope,onScope}) {
+ const [revision,setRevision]=useState(0);
+ useEffect(()=>{const refresh=()=>setRevision(n=>n+1);window.addEventListener(STUDY_CHANGED,refresh);return()=>window.removeEventListener(STUDY_CHANGED,refresh);},[]);
+ const student=getStudent(),progress=readUnitStudy(student,unit).listening||{};
+ const scopes=paragraphOptions(unit).map(x=>x.value);
+ const items=scopes.length?scopes:["full"];
+ return <section className="th-panel th-listening-missions">
+  <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · LISTENING</span>
+   <h2>Listening Mission</h2><p>各段落を最後まで3回聞いてクリア。右のAudio Playerで再生してください。</p></header>
+  <div className="th-listening-mission-grid">{items.map(key=>{
+    const count=Number(progress[key])||0;
+    return <button type="button" key={key} className={"th-listening-part "+(key===scope?"active":"")} onClick={()=>onScope(key)}>
+      <span>{key==="full"?"Full Text":key.toUpperCase()}</span>
+      <Ring value={Math.min(100,count/3*100)}/>
+      <strong>{count} / 3 回</strong>
+      <small>{count>=3?"✓ CLEAR":key===scope?"右の▶で再生":"この段落を選ぶ"}</small>
+    </button>;
+  })}</div>
+  <p className="th-note">※途中停止・5秒移動だけではカウントしません。完全に再生を終えたときに1回加算します。</p>
+ </section>;
+}
