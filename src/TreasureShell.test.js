@@ -210,3 +210,29 @@ test("every metric keeps its click action after the four-column layout redesign"
  fireEvent.click(screen.getByRole("button",{name:/内容把握 EN 0% 練習へ/}));
  expect(screen.getByRole("heading",{name:"内容理解 Check"})).toBeInTheDocument();
 });
+
+
+test("Unit 10 comprehension has sixteen contextual questions and opens word help",()=>{
+  const student={class:"3-2",number:"10",name:"Comprehension Student"};
+  localStorage.setItem("storyMatchStudent",JSON.stringify(student));
+  render(<App/>);
+  fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
+  fireEvent.click(screen.getByRole("button",{name:/内容把握 EN 0% 練習へ/}));
+  expect(screen.getByRole("heading",{name:"内容理解 Check"})).toBeInTheDocument();
+  expect(screen.getByText(/QUESTION/).parentElement).toHaveTextContent("16");
+  fireEvent.click(screen.getAllByRole("button",{name:"Where の意味"})[0]);
+  expect(screen.getByRole("dialog",{name:"単語の意味"})).toHaveTextContent("どこ");
+  fireEvent.click(screen.getByRole("button",{name:"単語カードを閉じる"}));
+  expect(screen.queryByRole("dialog",{name:"単語の意味"})).toBeNull();
+});
+
+test("correct and wrong choices show fullscreen overlays without changing score prematurely",()=>{
+  const student={class:"3-2",number:"12",name:"Animation Student"};
+  localStorage.setItem("storyMatchStudent",JSON.stringify(student));
+  render(<App/>);
+  fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
+  fireEvent.click(screen.getByRole("button",{name:/内容把握 EN 0% 練習へ/}));
+  fireEvent.click(screen.getByRole("button",{name:/選択肢 .*On license plates and phone numbers/}));
+  expect(screen.getByText("CORRECT!")).toBeInTheDocument();
+  expect(document.querySelector(".th-answer-overlay")).toHaveClass("is-correct");
+});

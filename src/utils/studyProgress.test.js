@@ -52,9 +52,23 @@ test("Story Match keeps old best scores and now also counts reading tries and ra
 test("comprehension is bilingual for all units; Units 10/15 have curated facts",()=>{
  for(let unit=1;unit<=15;unit++){
   const en=comprehensionQuestions(unit,"en"),ja=comprehensionQuestions(unit,"ja");
-  expect(en).toHaveLength(4);expect(ja).toHaveLength(4);
-  en.concat(ja).forEach(q=>{expect(q.options).toHaveLength(4);expect(q.options).toContain(q.correct);});
+  expect(en.length).toBeGreaterThanOrEqual(12);expect(ja).toHaveLength(en.length);
+  en.concat(ja).forEach(q=>{expect(q.options).toHaveLength(4);expect(new Set(q.options).size).toBe(4);expect(q.options).toContain(q.correct);expect(q.source.en.length).toBeGreaterThan(8);});
  }
  expect(comprehensionQuestions(10,"en")[0].type).toBe("fact");
  expect(comprehensionQuestions(15,"ja")[0].type).toBe("fact");
+});
+
+
+test("new comprehension banks cover key sentence content without copying four items across units",()=>{
+ const expected={10:16,11:12,12:14,13:14,14:14,15:16};
+ for(const [unit,count] of Object.entries(expected)){
+   const en=comprehensionQuestions(Number(unit),"en");
+   expect(en).toHaveLength(count);
+   expect(en.filter(q=>q.type==="fact").length).toBeGreaterThanOrEqual(6);
+   expect(en.filter(q=>q.type==="sentence")).toHaveLength(6);
+   expect(new Set(en.map(q=>q.prompt)).size).toBe(count);
+ }
+ const content=comprehensionQuestions(10,"en");
+ expect(content.map(q=>q.prompt).join(" ")).toMatch(/seventh|eight|Bible/i);
 });

@@ -30,7 +30,7 @@ function uniqueChoiceSet(items) {
    seen.add(text);return true;
  });
 }
-function sourceChecks(unit,language,limit=6) {
+function sourceChecks(unit,language) {
  const scenes=allUnitsData[unit]||[];
  if(scenes.length<4)return [];
  const positions=[0,2,4,6,8,scenes.length-1].filter((i)=>i<scenes.length);
