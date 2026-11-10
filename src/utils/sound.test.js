@@ -1,5 +1,3 @@
-import {playSound} from "./sound";
-
 describe("shared iPad-friendly quiz effects",()=>{
  let instances,oscillators,frequencyValues,gainValues,context;
  beforeEach(()=>{
