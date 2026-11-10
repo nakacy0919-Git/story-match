@@ -70,7 +70,7 @@ test("Reading questions support multi-select with correct answer explanation",()
  expect(screen.getByRole("heading",{name:/Reading Questions/})).toBeInTheDocument();
  expect(screen.getByText(/p\.41/)).toBeInTheDocument();
  // The first question asks for the worldwide lucky number.
- const seven=screen.getByRole("button",{name:/7/});
+ const seven=document.querySelectorAll(".th-workbook-option")[2];
  fireEvent.click(seven);
  fireEvent.click(screen.getByRole("button",{name:"判定する"}));
  expect(screen.getByText(/正解！/)).toBeInTheDocument();
