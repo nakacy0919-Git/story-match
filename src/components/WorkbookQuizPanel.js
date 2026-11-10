@@ -81,7 +81,7 @@ export default function WorkbookQuizPanel({unit,section,onOpen}){
  const q=questions[index];
  const completed=review!==null;
  const score=(isCorrect)=>{
-   if(completed||!q)return;
+   if((completed&&review!=="pending")||!q)return;
    const next=earned+(isCorrect?1:0);
    setEarned(next);setReview(isCorrect);
    playAnswerSound(isCorrect,soundOn);
@@ -159,7 +159,7 @@ export default function WorkbookQuizPanel({unit,section,onOpen}){
        <strong>{review==="pending"?"解答例と照合":review?"✓ 正解！":"次のポイントを確認"}</strong>
        <span className="th-wb-score">達成 {earned} / {index+1}</span>
       </div>
-      <div className="th-wb-correct-answer"><small>{isWritten?"模範解答例":"正解"}</small>
+      <div className="th-wb-correct-answer"><small>{isWritten?"解答例":"正解"}</small>
        <p>{correctText(q)}</p></div>
       {q.explanation&&<p className="th-wb-explanation-text">{q.explanation}</p>}
       {review==="pending"?<div className="th-wb-self-check">
