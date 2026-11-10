@@ -260,3 +260,19 @@ test("quiz sound can be muted before answering and stays off after navigation",(
  expect(toggle).toHaveAttribute("aria-pressed","false");
  expect(localStorage.getItem("treasureComprehensionSound")).toBe("off");
 });
+
+
+test("Vocabulary and Sentence Builder offer sound controls and remember the mute preference",()=>{
+  boot();
+  fireEvent.click(screen.getByRole("button",{name:/Vocabulary.*単語と4択クイズ/}));
+  const vocab=screen.getByRole("button",{name:"単語クイズの効果音を切り替え"});
+  expect(vocab).toHaveAttribute("aria-pressed","true");
+  fireEvent.click(vocab);
+  expect(vocab).toHaveAttribute("aria-pressed","false");
+  expect(window.localStorage.getItem("treasurePracticeSound")).toBe("off");
+  fireEvent.click(screen.getByRole("button",{name:/Grammar.*英文の並び替え/}));
+  const grammar=screen.getByRole("button",{name:"英文並び替えの効果音を切り替え"});
+  expect(grammar).toHaveAttribute("aria-pressed","false");
+  fireEvent.click(grammar);
+  expect(window.localStorage.getItem("treasurePracticeSound")).toBe("on");
+});
