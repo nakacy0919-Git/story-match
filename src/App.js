@@ -8,6 +8,7 @@ import {
 } from "./components/TreasurePanels";
 import TreasureAudio from "./components/TreasureAudio";
 import LearningDashboard, { ListeningMissionPanel } from "./components/LearningDashboard";
+import WorkbookQuizPanel from "./components/WorkbookQuizPanel";
 import "./LearningAnalytics.css";
 import "./App.css";
 import "./TreasureShell.css";
@@ -18,6 +19,9 @@ const buttons=[
   {id:"script",name:"Script",sub:"英文の本文",icon:"📖"},
   {id:"japanese",name:"Japanese",sub:"日本語訳",icon:"🇯🇵"},
   {id:"comprehension",name:"Comprehension",sub:"内容理解 EN / JP",icon:"🧠"},
+  {id:"workbook-reading",name:"Reading Questions",sub:"問題集の読解設問",icon:"📑"},
+  {id:"workbook-grammar",name:"Grammar & Writing",sub:"問題集の文法・英作文",icon:"✍️"},
+  {id:"workbook-various",name:"Various Questions",sub:"問題集の語彙・主題",icon:"🗂️"},
   {id:"vocabulary",name:"Vocabulary",sub:"単語と4択クイズ",icon:"📝"},
   {id:"grammar",name:"Grammar",sub:"英文の並び替え",icon:"🔤"},
   {id:"reading",name:"Reading Check",sub:"音読判定",icon:"🎙️"},
@@ -61,6 +65,7 @@ function App() {
           {panel==="japanese"&&<ScriptPanel unit={unit} scope={scope} japaneseOnly/>}
           {panel==="vocabulary"&&<VocabularyPanel unit={unit} initialDirection={variant||"enJa"}/>}
           {panel==="comprehension"&&<ComprehensionPanel unit={unit} initialLanguage={variant||"en"}/>}
+          {panel.startsWith("workbook-")&&<WorkbookQuizPanel unit={unit} section={panel} onOpen={openPanel}/>}
           {panel==="grammar"&&<GrammarPanel unit={unit}/>}
           {panel==="reading"&&<ReadingPractice unit={unit} scope={scope}/>}
           {panel==="shadowing"&&<ReadingPractice unit={unit} scope={scope} shadowing/>}
@@ -79,8 +84,8 @@ function App() {
         </div>
         <TreasureAudio key={unit+"-"+scope} unit={unit} scope={scope} text={lesson.en}/>
         <div className="th-sidebar-buttons">
-          {buttons.map((b,i)=><React.Fragment key={b.id}>
-            {(i===5||i===8)&&<div className="th-side-separator"/>}
+          {buttons.filter((b)=>!b.id.startsWith("workbook-")||unit>=10).map((b)=><React.Fragment key={b.id}>
+            {(b.id==="workbook-reading"||b.id==="vocabulary"||b.id==="reading"||b.id==="story")&&<div className="th-side-separator"/>}
             <button className={"th-side-button "+(panel===b.id?"selected":"")}
               aria-pressed={panel===b.id} onClick={()=>openPanel(b.id)}>
               <span className="th-side-icon">{b.icon}</span>
