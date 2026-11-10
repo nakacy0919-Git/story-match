@@ -115,6 +115,7 @@ function App({ embedded = false, selectedUnit = null }) {
   };
   const start = () => {
     reset();
+    if(mode==="random"||mode==="listening")startedAt.current=Date.now();
     setView("game");
   };
   const finish = (score) => {
@@ -133,6 +134,7 @@ function App({ embedded = false, selectedUnit = null }) {
     } else
       save(mode, score, {
         count: count === "ALL" ? total : Math.min(total, Number(count)),
+        elapsedSeconds: mode==="random" ? Math.round((Date.now()-(startedAt.current??Date.now()))/100)/10 : undefined,
       });
   };
   const back = () => {
@@ -536,7 +538,7 @@ function App({ embedded = false, selectedUnit = null }) {
                   minPoints={rules[mode + "Points"]}
                   qCount={count}
                   onGameClear={finish}
-                  onRetry={reset}
+                  onRetry={()=>{reset();startedAt.current=Date.now();}}
                   studentInfo={student}
                 />
               )}
