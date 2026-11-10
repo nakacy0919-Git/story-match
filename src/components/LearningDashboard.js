@@ -4,6 +4,7 @@ import { loadProgress } from "../utils/progress";
 import { STUDY_CHANGED, validStudent, readUnitStudy, completedListening, emitStudyChange } from "../utils/studyProgress";
 import { paragraphOptions } from "./TreasurePanels";
 import { allUnitsData } from "../unitsData";
+import { workbookSections, getWorkbookQuestions } from "./WorkbookQuizPanel";
 
 const clamp=n=>Math.max(0,Math.min(100,Math.round(Number(n)||0)));
 function Ring({value,size="small"}) {
@@ -130,6 +131,23 @@ export default function LearningDashboard({unit,onOpen}) {
       </button>)}</div>
     </section>)}
   </div>
+  {unit>=10&&<section className="th-wb-dashboard">
+    <h3>WORKBOOK PRACTICE · READING / GRAMMAR / VARIOUS</h3>
+    <div className="th-wb-dashboard-row">
+      {workbookSections.map(section=>{
+        const record=readUnitStudy(student,unit)[section.metric]?.complete||{};
+        const percent=record.best||0;
+        return <button type="button" key={section.id} className="th-wb-dashboard-card"
+          aria-label={section.name+" "+percent+"% 練習へ"} onClick={()=>onOpen(section.id)}>
+          <Ring value={percent}/>
+          <span><strong>{section.icon} {section.name}</strong>
+            <small>{getWorkbookQuestions(unit,section.id).length}問 · {record.attempts||0}回 · Best {percent}%</small>
+          </span>
+          <span aria-hidden="true">↗</span>
+        </button>;
+      })}
+    </div>
+  </section>}
   <p className="th-analytics-footnote">現在の端末・ブラウザに個人別で保存。過去の記録がない項目は0%、旧形式にない回数は0回として表示します。Story Matchの既存ベスト記録は引き継ぎます。</p>
  </div>;
 }
