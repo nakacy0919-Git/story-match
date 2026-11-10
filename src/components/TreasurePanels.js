@@ -102,6 +102,14 @@ export function VocabularyPanel({unit,initialDirection="enJa"}) {
  const [direction,setDirection]=useState(initialDirection);
  const [mode,setMode]=useState("study"),[questions,setQuestions]=useState([]),[index,setIndex]=useState(0),
  [answered,setAnswered]=useState(null),[correct,setCorrect]=useState(0);
+ const [soundOn,setSoundOn]=useState(()=>{
+  try{return window.localStorage.getItem("treasurePracticeSound")!=="off";}catch(_){return true;}
+ });
+ const toggleSound=()=>setSoundOn(prev=>{
+  const next=!prev;
+  try{window.localStorage.setItem("treasurePracticeSound",next?"on":"off");}catch(_){}
+  return next;
+ });
  useEffect(()=>{setDirection(initialDirection);setMode("study");setIndex(0);setAnswered(null);setCorrect(0);},[unit,initialDirection]);
  const startQuiz=(dir=direction)=>{
    const selected=shuffle(words);
@@ -117,6 +125,7 @@ export function VocabularyPanel({unit,initialDirection="enJa"}) {
  const choose=value=>{
    if(answered!==null)return;
    setAnswered(value);
+   playAnswerSound(value===q.correct,soundOn);
    const next=correct+(value===q.correct?1:0);
    setCorrect(next);
    if(index===questions.length-1&&questions.length)saveQuizResult(unit,"vocabulary",direction,100*next/questions.length);
@@ -128,6 +137,8 @@ export function VocabularyPanel({unit,initialDirection="enJa"}) {
    <button className="th-small" onClick={()=>setMode("study")}>単語一覧</button>
    <button className="th-primary" disabled={!words.length} onClick={()=>startQuiz("enJa")}>英語 → 日本語</button>
    <button className="th-primary" disabled={!words.length} onClick={()=>startQuiz("jaEn")}>日本語 → 英語</button>
+   <button type="button" className="th-small" aria-label="単語クイズの効果音を切り替え"
+     aria-pressed={soundOn} onClick={toggleSound}>{soundOn?"🔊 効果音 ON":"🔇 効果音 OFF"}</button>
   </div>
   {mode==="study"?<div className="th-word-grid">{words.map((w,i)=><div className="th-word-card" key={w.word+i}>
    <b>{w.word}</b><p>{w.meaning}</p></div>)}</div>:
@@ -267,13 +278,21 @@ export function GrammarPanel({unit}) {
   const sentences=useMemo(()=>(allUnitsData[unit]||[]).map((x)=>x.en)
     .filter((s)=>s.split(/\s+/).length>=5&&s.split(/\s+/).length<=16).slice(0,10),[unit]);
   const [index,setIndex]=useState(0),[picked,setPicked]=useState([]),[checked,setChecked]=useState(false),[,setSolved]=useState([]);
+ const [soundOn,setSoundOn]=useState(()=>{
+  try{return window.localStorage.getItem("treasurePracticeSound")!=="off";}catch(_){return true;}
+ });
+ const toggleSound=()=>setSoundOn(prev=>{
+  const next=!prev;
+  try{window.localStorage.setItem("treasurePracticeSound",next?"on":"off");}catch(_){}
+  return next;
+ });
   const [best,saveBest]=useBest("th-grammar-best:"+unit);
   useEffect(()=>{setIndex(0);setPicked([]);setChecked(false);setSolved([]);},[unit]);
   const sentence=sentences[index]||"";
   const words=useMemo(()=>sentence.split(/\s+/).filter(Boolean),[sentence]);
   const positions=useMemo(()=>{const a=shuffle(words.map((_,i)=>i));return a.every((n,i)=>n===i)?a.reverse():a;},[words]);
   const correct=picked.length===words.length&&picked.every((n,i)=>n===i);
-  const check=()=>{if(checked)return;setChecked(true);saveGrammarAnswer(unit,index,correct,sentences.length);if(correct){setSolved((old)=>{const next=[...new Set([...old,index])];saveBest(next.length);return next;});}};
+  const check=()=>{if(checked)return;setChecked(true);playAnswerSound(correct,soundOn);saveGrammarAnswer(unit,index,correct,sentences.length);if(correct){setSolved((old)=>{const next=[...new Set([...old,index])];saveBest(next.length);return next;});}};
   return <section className="th-panel">
     <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · GRAMMAR</span><h2>Sentence Builder</h2>
       <p>実際の本文を使った語順並び替え練習 · ベスト {best} 問正解</p></header>
@@ -285,6 +304,8 @@ export function GrammarPanel({unit}) {
         onClick={()=>setPicked((a)=>[...a,n])}>{words[n]}</button>)}</div>
       {checked&&<div className="th-feedback"><strong>{correct?"✓ 正解！":"惜しい！語順を確認しましょう。"}</strong><p>{sentence}</p></div>}
       <div className="th-actions"><button className="th-small" onClick={()=>{setPicked([]);setChecked(false);}}>リセット</button>
+        <button type="button" className="th-small" aria-label="英文並び替えの効果音を切り替え"
+          aria-pressed={soundOn} onClick={toggleSound}>{soundOn?"🔊 効果音 ON":"🔇 効果音 OFF"}</button>
         {checked?<button className="th-primary" onClick={()=>{setIndex((index+1)%sentences.length);setPicked([]);setChecked(false);}}>次の英文 →</button>
         :<button className="th-primary" disabled={picked.length!==words.length} onClick={check}>答え合わせ</button>}</div>
     </div>:<p>練習に適した英文が登録されていません。</p>}
