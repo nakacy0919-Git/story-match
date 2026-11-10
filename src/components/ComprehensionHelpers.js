@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { createPortal } from "react-dom";
+import { playSound } from "../utils/sound";
 
 const common=[
 "why|なぜ","what|何","who|誰","which|どちら・どの","where|どこ","when|いつ",
@@ -98,29 +99,10 @@ export function WordHelpModal({word,onClose}) {
   </div>
  </div>,document.body);
 }
-export function playAnswerSound(correct,enabled=true) {
- if(!enabled)return;
- try{
-  const Context=window.AudioContext||window.webkitAudioContext;
-  if(!Context)return;
-  const ctx=new Context();
-  if(ctx.state==="suspended")ctx.resume().catch(()=>{});
-  const begin=ctx.currentTime+.012;
-  const notes=correct?[523.25,659.25,783.99,1046.5]:[392,329.63];
-  notes.forEach((frequency,i)=>{
-   const at=begin+i*(correct?0.095:0.14);
-   const osc=ctx.createOscillator(),gain=ctx.createGain();
-   osc.type=correct?"sine":"triangle";
-   osc.frequency.setValueAtTime(frequency,at);
-   gain.gain.setValueAtTime(.0001,at);
-   gain.gain.exponentialRampToValueAtTime(correct ? 0.105 : 0.075,at+.02);
-   gain.gain.exponentialRampToValueAtTime(.0001,at+(correct ? 0.24 : 0.29));
-   osc.connect(gain);gain.connect(ctx.destination);
-   osc.start(at);osc.stop(at+(correct ? 0.25 : 0.3));
-  });
-  window.setTimeout(()=>ctx.close().catch(()=>{}),1000);
- }catch(_){}
+export function playAnswerSound(correct, enabled=true) {
+ playSound(correct?"correct":"wrong",enabled);
 }
+
 export function AnswerCelebration({result}) {
  if(!result)return null;
  const confetti=Array.from({length:18},(_,i)=>i);
