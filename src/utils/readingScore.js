@@ -1,8 +1,9 @@
 /* Story Match word accuracy: Copeak numeric normalization and reviewed name exclusions. */
 
 import { units } from "./readingNumbers";
-const numericDigitKey = digit => "@number:" + Number(digit);
 import { readingNames } from "./readingNames";
+
+const numericDigitKey = digit => "@number:" + Number(digit);
 function normalized(text) {
   let value = String(text || "")
     .toLowerCase()
