@@ -353,3 +353,123 @@
   .th-reading-status{font-size:10px}
   .th-reading-gauge{padding-left:3px}
 }
+
+
+/* Story Match embedded in Treasure Hunt: constrain the GAME to the central
+   iPad viewport. An earlier height:auto/min-height:520px rule enlarged the
+   embedded app and forced the whole page to scroll. Dashboard remains scrollable. */
+.th-stage-content.is-story {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.th-stage .app-shell.mission-active {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.th-stage .app-shell.mission-active .game-toolbar {
+  flex: 0 0 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 3px 9px;
+}
+.th-stage .app-shell.mission-active .game-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.th-stage .app-shell.mission-active .puzzle-board {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  gap: 5px;
+  padding: 2px 4px 4px;
+  overflow: hidden;
+}
+.th-stage .app-shell.mission-active .puzzle-meta {
+  flex: 0 0 27px;
+  min-height: 27px;
+  height: 27px;
+}
+.th-stage .app-shell.mission-active .puzzle-columns {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  gap: 7px;
+}
+.th-stage .app-shell.mission-active .puzzle-slots {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  gap: 5px;
+}
+.th-stage .app-shell.mission-active .puzzle-slot {
+  min-height: 0;
+  padding: 4px;
+  gap: 2px;
+  grid-template-rows: minmax(0,auto) 15px minmax(0,1fr);
+}
+.th-stage .app-shell.mission-active .puzzle-passage {
+  min-height: 0;
+  line-height: 1.18;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.th-stage .app-shell.mission-active .puzzle-passage::-webkit-scrollbar {display:none}
+.th-stage .app-shell.mission-active .slot-translation {
+  height: 15px;
+  min-height: 15px;
+}
+.th-stage .app-shell.mission-active .slot-translation button {
+  font-size: 9px;
+  line-height: 13px;
+  padding: 0px 3px;
+}
+.th-stage .app-shell.mission-active .drop-target {min-height: 0;height:100%}
+.th-stage .app-shell.mission-active .puzzle-deck {
+  min-height: 0;
+  height: 100%;
+  padding: 5px;
+  gap: 5px;
+  grid-template-rows: repeat(var(--deck-rows, 6), minmax(0, 1fr));
+  overflow: hidden;
+}
+.th-stage .app-shell.mission-active .puzzle-image {
+  min-height: 0;
+  height: 100%;
+  aspect-ratio: auto;
+}
+/* Portrait iPad: slots above, an accessible two-row picture tray below. */
+@media (min-width:651px) and (max-width:900px) and (orientation:portrait) {
+  .th-stage-content.is-story { padding: 5px }
+  .th-stage .app-shell.mission-active .puzzle-columns {
+    flex-direction: column;
+  }
+  .th-stage .app-shell.mission-active .puzzle-slots {
+    flex: 1 1 auto;
+    height: auto;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    grid-template-rows: repeat(4,minmax(0,1fr));
+  }
+  .th-stage .app-shell.mission-active .puzzle-deck {
+    flex: 0 0 clamp(115px,18dvh,170px);
+    height: clamp(115px,18dvh,170px);
+    grid-template-columns: repeat(6,minmax(0,1fr));
+    grid-template-rows: repeat(2,minmax(0,1fr));
+  }
+}
+/* Short landscape iPads retain the full grid without page scrolling. */
+@media (min-width:651px) and (max-height:740px) and (orientation:landscape) {
+  .th-stage-content.is-story {padding:3px 5px 4px}
+  .th-stage .app-shell.mission-active .puzzle-board {gap:3px;padding:0 2px 2px}
+  .th-stage .app-shell.mission-active .puzzle-columns {gap:5px}
+  .th-stage .app-shell.mission-active .puzzle-meta {height:23px;min-height:23px;flex-basis:23px}
+  .th-stage .app-shell.mission-active .puzzle-slot {padding:3px;gap:1px}
+  .th-stage .app-shell.mission-active .puzzle-deck {padding:3px;gap:3px}
+}

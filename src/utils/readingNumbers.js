@@ -79,7 +79,7 @@ function rawWords(text) {
       .replace(/[’']/g, "")
       .replace(/\b\d{1,3}(?:,\d{3})+\b/g, (match) => match.replace(/,/g, ""))
       .replace(/(\d(?:\.\d+)?)\s*%/g, "$1 percent")
-      .match(/\d+(?:\.\d+)?(?:st|nd|rd|th)?|[a-z]+/g) || []
+      .match(/\d+(?:\.\d+)?(?:st|nd|rd|th|s)?|[a-z]+/g) || []
   );
 }
 function numericKey(value, ordinal = false) {
@@ -94,6 +94,9 @@ function numericKey(value, ordinal = false) {
   );
 }
 function literalNumber(token) {
+  // Numeric plurals such as 8s are read aloud as "eights".
+  const plural = /^(\d+)s$/.exec(token);
+  if (plural) return numericKey(plural[1]) + ":plural";
   const match = /^(\d+(?:\.\d+)?)(st|nd|rd|th)?$/.exec(token);
   return match ? numericKey(match[1], !!match[2]) : null;
 }
@@ -105,6 +108,11 @@ function cardinalValue(token) {
       : null;
 }
 function numberPhrase(tokens, start) {
+  const plurals = { zeros: 0, ones: 1, twos: 2, threes: 3, fours: 4,
+    fives: 5, sixes: 6, sevens: 7, eights: 8, nines: 9, tens: 10 };
+  if (own(plurals, tokens[start])) {
+    return { end: start + 1, key: numericKey(plurals[tokens[start]]) + ":plural" };
+  }
   // "twenty twenty-six" and "nineteen ninety-nine" are common year readings.
   const prefix = YEAR_PREFIX[tokens[start]];
   const next = cardinalValue(tokens[start + 1]);

@@ -2,6 +2,8 @@
 
 import { units } from "./readingNumbers";
 import { readingNames } from "./readingNames";
+
+const numericDigitKey = digit => "@number:" + Number(digit);
 function normalized(text) {
   let value = String(text || "")
     .toLowerCase()
@@ -183,6 +185,17 @@ function score(sentence, spoken) {
       } else {
         if (i < n) dp[i + 1][j] = Math.min(dp[i + 1][j], value + 1);
         if (j < m) dp[i][j + 1] = Math.min(dp[i][j + 1], value + 1);
+        // License plates/phone numbers like 8888 may be spoken as
+        // "eight eight eight eight", while the printed text uses one token.
+        // Match only an exact run of digits so ordinary errors still count.
+        if (i < n && typeof expected[i] === "string") {
+          const run = /^@number:(\d{2,8})$/.exec(expected[i]);
+          if (run && j + run[1].length <= m &&
+              [...run[1]].every((digit, k) => heard[j + k] === numericDigitKey(digit)))
+            dp[i + 1][j + run[1].length] = Math.min(
+              dp[i + 1][j + run[1].length], value
+            );
+        }
         if (i < n && j < m)
           dp[i + 1][j + 1] = Math.min(
             dp[i + 1][j + 1],
