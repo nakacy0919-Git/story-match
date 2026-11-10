@@ -98,3 +98,24 @@ test("only non-English or named terms is not sufficient to clear reading", () =>
   expect(score("He saw 你好 today.", "你好").percent).toBe(0);
   expect(score("The word 八 (bā) means eight.", "八").percent).toBe(0);
 });
+
+
+test.each([
+  ["8", "eight"],
+  ["eight", "8"],
+  ["8s", "eights"],
+  ["eights", "8s"],
+  ["8888", "eight eight eight eight"],
+  ["8 on their license plates", "eight on their license plates"],
+  ["A car with many 8s is often a luxury car", "A car with many eights is often a luxury car"],
+  ["Phone numbers which end in 8888 are also in high demand",
+    "Phone numbers which end in eight eight eight eight are also in high demand"],
+])("Story Match reading accepts numeric spelling: %s = %s", (written, spoken) => {
+  expect(score(written, spoken).percent).toBe(100);
+});
+
+test("nearby but wrong numbers still lower Accuracy",()=>{
+  expect(score("There were 8 students", "There were seven students").percent).toBeLessThan(100);
+  expect(score("The number is 8888", "The number is eight eight eight nine").percent).toBeLessThan(100);
+  expect(score("She owns 8s", "She owns sevens").percent).toBeLessThan(100);
+});

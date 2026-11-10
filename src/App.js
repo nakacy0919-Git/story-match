@@ -53,7 +53,7 @@ function App() {
     </nav>
     <div className={"th-workspace "+(panel==="welcome"?"is-welcome":"")}>
       <div className="th-stage" style={{ backgroundImage: 'linear-gradient(155deg,rgba(243,248,253,.91),rgba(253,244,237,.92)),url("/treasure-cover.webp")', backgroundSize: "cover", backgroundPosition: "center" }}>
-        {panel!=="welcome"&&panel!=="progress"&&<div className="th-stage-top">
+        {panel!=="welcome"&&panel!=="progress"&&panel!=="story"&&<div className="th-stage-top">
           <div><span className="th-kicker">TREASURE HUNT · UNIT {unit}</span>
             <strong>{current.icon} {current.name}</strong></div>
           <div className="th-stage-sub">{scope==="full"?"Full Text":"Paragraph "+scope.slice(1)}</div>

@@ -226,7 +226,7 @@ export default function MatchBoard({
             </div>
           ))}
         </div>
-        <aside className="puzzle-deck">
+        <aside className="puzzle-deck" style={{ "--deck-rows": Math.ceil(deck.length / 2) }}>
           {isCleared ? (
             <div className="puzzle-result">
               <span className="eyebrow">MISSION COMPLETE</span>
