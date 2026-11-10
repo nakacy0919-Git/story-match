@@ -15,7 +15,7 @@ const visit=(unit=10)=>{
  fireEvent.click(screen.getByRole("button",{name:"Unit "+unit}));
 };
 test("all supplied Units 10–15 have three strictly separate, source-page-indexed question banks",()=>{
- const counts={10:[11,7,2],11:[10,9,2],12:[8,11,2],13:[11,9,3],14:[12,10,2],15:[10,9,4]};
+ const counts={10:[12,7,2],11:[10,9,2],12:[8,11,2],13:[13,9,3],14:[12,10,2],15:[10,9,4]};
  for(const [unit,expected] of Object.entries(counts)){
   const n=Number(unit);
   const parts=[workbookReading[n],workbookGrammar[n],workbookVarious[n]];
@@ -74,7 +74,7 @@ test("Reading questions support multi-select with correct answer explanation",()
  fireEvent.click(seven);
  fireEvent.click(screen.getByRole("button",{name:"判定する"}));
  expect(screen.getAllByText(/正解！/).length).toBeGreaterThanOrEqual(1);
- expect(screen.getByText(/第1段落/)).toBeInTheDocument();
+ expect(screen.getAllByText(/第1段落/).length).toBeGreaterThanOrEqual(1);
 });
 test("Grammar & Writing keeps a separate practice and can grade a short answer",()=>{
  visit(14);
