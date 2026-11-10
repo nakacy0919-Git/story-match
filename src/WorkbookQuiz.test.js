@@ -73,7 +73,7 @@ test("Reading questions support multi-select with correct answer explanation",()
  const seven=document.querySelectorAll(".th-workbook-option")[2];
  fireEvent.click(seven);
  fireEvent.click(screen.getByRole("button",{name:"判定する"}));
- expect(screen.getByText(/正解！/)).toBeInTheDocument();
+ expect(screen.getAllByText(/正解！/).length).toBeGreaterThanOrEqual(1);
  expect(screen.getByText(/第1段落/)).toBeInTheDocument();
 });
 test("Grammar & Writing keeps a separate practice and can grade a short answer",()=>{
@@ -89,7 +89,7 @@ test("Various Questions never guesses answers for unavailable listening audio",(
  visit(15);
  fireEvent.click(screen.getByRole("button",{name:/Various Questions.*問題集の語彙・主題/}));
  expect(screen.getByRole("heading",{name:/Various Questions/})).toBeInTheDocument();
- expect(screen.getByText(/p\.63/)).toBeInTheDocument();
+ expect(screen.getAllByText(/p\.63/).length).toBeGreaterThanOrEqual(1);
  fireEvent.click(screen.getByText(/Listening：p\.63/));
  expect(screen.getByText(/原音源が未提供/)).toBeInTheDocument();
 });
@@ -101,7 +101,7 @@ test("Workbook progress is saved independently from the other kinds of reading p
  const first=screen.getByRole("button",{name:/ことわざ/});
  fireEvent.click(first);
  fireEvent.click(screen.getByRole("button",{name:"判定する"}));
- expect(screen.getByText(/正解！/)).toBeInTheDocument();
+ expect(screen.getAllByText(/正解！/).length).toBeGreaterThanOrEqual(1);
  expect(readUnitStudy(student,10).vocabulary).toBeUndefined();
  expect(readUnitStudy(student,10).workbookVarious).toBeUndefined(); // save only after completing the category
 });
