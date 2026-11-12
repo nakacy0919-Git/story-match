@@ -13,8 +13,9 @@
 .th-wb-prompt{font-size:clamp(17px,1.8vw,23px);line-height:1.65;font-weight:850;color:#22496e;margin:0 0 13px;white-space:pre-wrap;overflow-wrap:anywhere}
 .th-wb-paragraph{display:inline-flex;background:#dceffb;color:#266c9b;font-size:11px;border-radius:6px;padding:4px 8px;margin:0 0 12px}
 .th-workbook-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.th-workbook-option{border:2px solid #d5e4f1;border-radius:11px;padding:13px 14px;background:white;color:#2c4d6d;
- display:flex;text-align:left;align-items:center;gap:11px;min-height:63px;line-height:1.5;font-size:14px;cursor:pointer}
+.th-workbook-option{border:2px solid #d5e4f1;border-radius:11px;padding:14px 16px;background:white;color:#2c4d6d;
+ display:flex;text-align:left;align-items:center;gap:11px;min-height:72px;line-height:1.55;
+ font-size:clamp(15px,1.4vw,19px);font-weight:800;overflow-wrap:anywhere;min-width:0;cursor:pointer}
 .th-workbook-option:hover:not(:disabled){border-color:#73b3da;background:#f8fcff}
 .th-workbook-option.chosen{border-color:#0d8eaf;background:#e7faff;box-shadow:0 1px 6px #0b83a122}
 .th-workbook-option:disabled{cursor:default}
@@ -83,3 +84,7 @@
 .th-workbook-header h2{font-size:24px}
 .th-wb-question-meta{font-size:10px}
 }
+
+/* Larger, bolder answer texts for Reading, Grammar & Writing, and Various Questions. */
+.th-wb-letter{flex:0 0 30px;font-size:13px;min-width:30px;line-height:1.5;box-sizing:border-box}
+@media(max-width:760px){.th-workbook-option{font-size:clamp(15px,2.1vw,17px);min-height:61px;padding:11px 13px}}

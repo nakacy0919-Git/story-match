@@ -2,6 +2,8 @@ import React from "react";
 import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import App from "./App";
+import { getLesson } from "./components/TreasurePanels";
+import { saveQuizResult } from "./utils/studyProgress";
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -165,13 +167,12 @@ test("Shadowing shares the same fixed panel and single recording control",()=>{
 });
 
 
-test("Power Slide opening reveals Learning Progress with 12-ring analytics",()=>{
+test("initial screen opens Learning Progress with the share QR and 12-ring analytics",()=>{
  render(<App/>);
- expect(screen.getByRole("dialog",{name:"POWER SLIDE オープニング"})).toBeInTheDocument();
  expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
- fireEvent.click(screen.getByRole("button",{name:/スキップ/}));
- expect(screen.queryByRole("dialog",{name:"POWER SLIDE オープニング"})).toBeNull();
+ expect(screen.getByRole("dialog",{name:"POWER SLIDE オープニング"})).toBeInTheDocument();
  expect(screen.queryByRole("heading",{name:"Reading Script"})).toBeNull();
+ expect(screen.getByRole("link",{name:"友達にStory Matchを紹介するQRコード"})).toHaveAttribute("href","https://story-match.vercel.app/");
  fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
  expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
  expect(document.querySelectorAll(".th-analytics-card")).toHaveLength(12);
@@ -211,6 +212,7 @@ test("every metric keeps its click action after the four-column layout redesign"
  expect(screen.getByRole("heading",{name:"Listening Mission"})).toBeInTheDocument();
  fireEvent.click(screen.getByRole("button",{name:/Learning Progress.*進捗を分析/}));
  fireEvent.click(screen.getByRole("button",{name:/内容把握 EN 0% 練習へ/}));
+  fireEvent.click(screen.getByRole("button",{name:"英語でチャレンジ"}));
  expect(screen.getByRole("heading",{name:"内容理解 Check"})).toBeInTheDocument();
 });
 
@@ -221,6 +223,7 @@ test("Unit 10 comprehension has sixteen contextual questions and opens word help
   render(<App/>);
   fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
   fireEvent.click(screen.getByRole("button",{name:/内容把握 EN 0% 練習へ/}));
+  fireEvent.click(screen.getByRole("button",{name:"英語でチャレンジ"}));
   expect(screen.getByRole("heading",{name:"内容理解 Check"})).toBeInTheDocument();
   expect(screen.getByText(/QUESTION/).parentElement).toHaveTextContent("16");
   fireEvent.click(screen.getAllByRole("button",{name:"Where の意味"})[0]);
@@ -235,6 +238,7 @@ test("correct and wrong choices show fullscreen overlays without changing score 
   render(<App/>);
   fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
   fireEvent.click(screen.getByRole("button",{name:/内容把握 EN 0% 練習へ/}));
+  fireEvent.click(screen.getByRole("button",{name:"英語でチャレンジ"}));
   fireEvent.click(screen.getByRole("button",{name:/選択肢 .*On license plates and phone numbers/}));
   expect(screen.getByText("CORRECT!")).toBeInTheDocument();
   expect(document.querySelector(".th-answer-overlay")).toHaveClass("is-correct");
@@ -247,6 +251,7 @@ test("incorrect answers show a full-screen feedback overlay and source evidence 
  render(<App/>);
  fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
  fireEvent.click(screen.getByRole("button",{name:/内容把握 EN 0% 練習へ/}));
+  fireEvent.click(screen.getByRole("button",{name:"英語でチャレンジ"}));
  fireEvent.click(screen.getByRole("button",{name:/選択肢 .*Only on school uniforms/}));
  expect(screen.getByText("NOT QUITE")).toBeInTheDocument();
  expect(document.querySelector(".th-answer-overlay")).toHaveClass("is-incorrect");
@@ -278,4 +283,51 @@ test("Vocabulary and Sentence Builder offer sound controls and remember the mute
   expect(grammar).toHaveAttribute("aria-pressed","false");
   fireEvent.click(grammar);
   expect(window.localStorage.getItem("treasurePracticeSound")).toBe("on");
+});
+
+
+test("Sentence Builder displays Japanese meaning before reordering",()=>{
+  boot();
+  fireEvent.click(screen.getByRole("button",{name:"Unit 11"}));
+  fireEvent.click(screen.getByRole("button",{name:/Grammar.*英文の並び替え/}));
+  const hint=screen.getByLabelText("並び替える英文の日本語訳");
+  expect(hint).toHaveTextContent("オオカミ");
+});
+
+test("Vocabulary opens as a quiz and moves forward after animated CORRECT",()=>{
+  jest.useFakeTimers();
+  try {
+    boot();
+    fireEvent.click(screen.getByRole("button",{name:"Unit 11"}));
+    fireEvent.click(screen.getByRole("button",{name:/Vocabulary.*単語と4択クイズ/}));
+    expect(document.querySelector(".th-vocab-quiz")).toBeInTheDocument();
+    expect(document.querySelector(".th-word-grid")).toBeNull();
+    expect(screen.getByText(/QUESTION 1/)).toBeInTheDocument();
+    const prompt=document.querySelector(".th-vocab-quiz h3").textContent;
+    const answer=getLesson(11).words.find(w=>w.word===prompt)?.meaning;
+    expect(answer).toBeTruthy();
+    const choice=[...document.querySelectorAll(".th-vocab-choices .th-choice")]
+      .find(button=>button.textContent.includes(answer));
+    expect(choice).toBeTruthy();
+    fireEvent.click(choice);
+    expect(screen.getByText("CORRECT!")).toBeInTheDocument();
+    act(()=>jest.advanceTimersByTime(1400));
+    expect(screen.getByText(/QUESTION 2/)).toBeInTheDocument();
+    expect(screen.queryByText("CORRECT!")).toBeNull();
+  } finally {jest.useRealTimers();}
+});
+
+test("Comprehension shows language selection and independent clear states",()=>{
+  const student={class:"3-2",number:"14",name:"Bilingual Learner"};
+  localStorage.setItem("storyMatchStudent",JSON.stringify(student));
+  saveQuizResult(11,"comprehension","en",100);
+  render(<App/>);
+  fireEvent.click(screen.getByRole("button",{name:"Unit 11"}));
+  fireEvent.click(screen.getByRole("button",{name:/Comprehension.*内容理解 EN/}));
+  expect(screen.getByText(/どちらの言語からチャレンジしますか/)).toBeInTheDocument();
+  const progress=screen.getByLabelText("英語と日本語のクリア状況");
+  expect(progress).toHaveTextContent("English CLEAR");
+  expect(progress).toHaveTextContent("日本語 未クリア");
+  fireEvent.click(screen.getByRole("button",{name:"日本語でチャレンジ"}));
+  expect(screen.getByText(/QUESTION/).parentElement).toHaveTextContent("12");
 });

@@ -5,6 +5,7 @@ import { STUDY_CHANGED, validStudent, readUnitStudy, completedListening, emitStu
 import { paragraphOptions } from "./TreasurePanels";
 import { allUnitsData } from "../unitsData";
 import { workbookSections, getWorkbookQuestions } from "./WorkbookQuizPanel";
+import ShareAppQR from "./ShareAppQR";
 
 const clamp=n=>Math.max(0,Math.min(100,Math.round(Number(n)||0)));
 function Ring({value,size="small"}) {
@@ -36,7 +37,7 @@ function ActivityIcon({name}) {
 
 function getStudent(){return readStoredJSON("storyMatchStudent",null);}
 function formatSeconds(v){return Number.isFinite(v)?v.toFixed(1)+"s":"—";}
-function summarize(unit,study,story){
+export function summarize(unit,study,story){
  const scenes=allUnitsData[unit]||[];
  const scopes=paragraphOptions(unit).map(x=>x.value);
  const listen=completedListening(study,scopes);
@@ -99,6 +100,7 @@ export default function LearningDashboard({unit,onOpen}) {
  };
  return <div className="th-analytics">
   <section className="th-analytics-hero">
+   <ShareAppQR/>
    <div className="th-analytics-intro"><span className="th-analytics-kicker">LEARNING ANALYTICS · UNIT {unit}</span>
     <h2>Learning Progress</h2>
     <p>12の学習スキルを分析。カードから練習へ進めます。</p>
