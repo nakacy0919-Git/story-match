@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import "./OpeningSequence.css";
 
 const INTRO_DURATION_MS = 5600;
@@ -9,16 +9,22 @@ const REDUCED_MOTION_DURATION_MS = 200;
  * so no lesson state or Learning Progress data is reset on exit.
  */
 export default function OpeningSequence({ onFinish }) {
+  const finished = useRef(false);
+  const finish = useCallback(() => {
+    if (finished.current) return;
+    finished.current = true;
+    onFinish();
+  }, [finish]);
   useEffect(() => {
     const reducedMotion =
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = window.setTimeout(
-      onFinish,
+      finish,
       reducedMotion ? REDUCED_MOTION_DURATION_MS : INTRO_DURATION_MS,
     );
     const onKeyDown = (event) => {
-      if (event.key === "Escape") onFinish();
+      if (event.key === "Escape") finish();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
@@ -50,7 +56,7 @@ export default function OpeningSequence({ onFinish }) {
         <span className="pso-title-rule" aria-hidden="true" />
         <span className="pso-subtitle">YOUR LEARNING ADVENTURE BEGINS</span>
       </div>
-      <button className="pso-skip" type="button" onClick={onFinish}>
+      <button className="pso-skip" type="button" onClick={finish}>
         スキップ <span aria-hidden="true">→</span>
       </button>
       <span className="pso-progress-label" aria-hidden="true">LEARNING PROGRESS</span>
