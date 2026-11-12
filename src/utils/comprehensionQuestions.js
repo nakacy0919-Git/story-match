@@ -37,11 +37,11 @@ function sourceChecks(unit,language) {
  return positions.map((position,n)=>{
    const correct=scenes[position];
    const distractors=shuffle(scenes.filter((row,i)=>i!==position
-     &&row.en!==correct.en&&row.ja!==correct.ja)).slice(0,3);
+     &&row.en!==correct.en&&row.ja!==correct.ja));
    const choices=uniqueChoiceSet([correct,...distractors].map((row)=>({
      en:language==="en"?row.en:row.ja,
      ja:language==="en"?row.ja:row.en
-   })));
+   }))).slice(0,4);
    if(choices.length!==4)return null;
    return {
      id:"sentence-"+position,
