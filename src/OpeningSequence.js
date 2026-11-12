@@ -14,7 +14,7 @@ export default function OpeningSequence({ onFinish }) {
     if (finished.current) return;
     finished.current = true;
     onFinish();
-  }, [finish]);
+  }, [onFinish]);
   useEffect(() => {
     const reducedMotion =
       typeof window.matchMedia === "function" &&
@@ -31,7 +31,7 @@ export default function OpeningSequence({ onFinish }) {
       window.clearTimeout(timer);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [onFinish]);
+  }, [finish]);
 
   return (
     <div className="pso-screen" role="dialog" aria-modal="true" aria-label="POWER SLIDE オープニング">
