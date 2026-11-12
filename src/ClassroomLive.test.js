@@ -1,3 +1,6 @@
+import React from "react";
+import {render,screen,cleanup} from "@testing-library/react";
+import App from "./App";
 import {parseJoinCode,parseObserverToken,readLocalLiveRecord,LIVE_METRICS} from "./utils/liveClassroom";
 import {readUnitStudy,saveQuizResult} from "./utils/studyProgress";
 
@@ -25,9 +28,6 @@ test("live snapshot sends exactly both units and existing twelve-progress catego
  
 
 test("teacher controls and observer dashboard are reachable through their own QR routes",()=>{
-  const React=require("react");
-  const {render,screen,cleanup,act}=require("@testing-library/react");
-  const App=require("./App").default;
   const previous=window.location.hash;
   try {
     window.location.hash="#/live-admin";

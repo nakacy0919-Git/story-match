@@ -5,6 +5,7 @@ const PATH = "treasure-live/v1/";
 const METRIC_KEYS = ["reading","compEn","compJa","shadow","listen","vocabE","vocabJ","grammar","storyRead","puzzle","random","storyListen"];
 const WORKBOOK_KEYS = ["workbookReading","workbookGrammar","workbookVarious"];
 const attempts = new Map();
+const snapshotCache = new Map();
 const safeText = (value, max = 60) =>
   typeof value === "string" ? value.normalize("NFKC").trim().slice(0, max) : "";
 const equalSecret = (a,b) => {
@@ -69,11 +70,13 @@ async function studentRows(blob, session){
   let cursor, rows=[];
   do {
     const page=await blob.list({prefix:path,limit:1000,...(cursor?{cursor}:{})});
-    for(const item of page.blobs||[]){
-      try{
-        const value=await readJson(blob,item.pathname);
-        if(value?.sessionId===session.id && value.student)rows.push(value);
-      }catch(_){/* A partial upload must not break the full lesson view. */}
+    const objects=page.blobs||[];
+    for(let n=0;n<objects.length;n+=12){
+      const values=await Promise.all(objects.slice(n,n+12).map(async(item)=>{
+        try{return await readJson(blob,item.pathname);}
+        catch(_){return null;} // A partial upload must not break the lesson view.
+      }));
+      rows.push(...values.filter(value=>value?.sessionId===session.id && value.student));
     }
     cursor=page.hasMore?page.cursor:null;
   }while(cursor && rows.length<1000);
@@ -94,6 +97,15 @@ async function discardOldSession(blob,session){
 function projectRow(item,{showNames=false}={}){
   return {student:{class:item.student.class,number:item.student.number,...(showNames?{name:item.student.name}:{})},
     units:item.units,seenAt:item.seenAt,activityAt:item.activityAt};
+}
+async function cachedSnapshot(blob,session,showNames){
+  const key=session.id+":"+Boolean(showNames);
+  const cached=snapshotCache.get(key);
+  if(cached && cached.expires>Date.now())return cached.value;
+  const value=await snapshot(blob,session,showNames);
+  snapshotCache.set(key,{value,expires:Date.now()+8000});
+  if(snapshotCache.size>20)snapshotCache.clear();
+  return value;
 }
 async function snapshot(blob, session, showNames){
   const rows=await studentRows(blob,session);
@@ -134,6 +146,7 @@ function createHandler({getBlob = () => import("@vercel/blob")}={}) {
           joinCode:randomBytes(6).toString("hex").toUpperCase(),
           createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+12*60*60*1000).toISOString()};
         await writeJson(blob,sessionPath(),session);
+        snapshotCache.clear();
         return res.status(200).json({session});
       }
       if(!session)return res.status(404).json({error:"公開授業はまだ作成されていません。"});
@@ -145,6 +158,7 @@ function createHandler({getBlob = () => import("@vercel/blob")}={}) {
       if(action==="close"){
         session={...session,status:"closed",observerToken:"",joinCode:""};
         await writeJson(blob,sessionPath(),session);
+        snapshotCache.clear();
         try{await discardOldSession(blob,session);}catch(_){/* Session is revoked even if cleanup needs retry. */}
         return res.status(200).json({ok:true});
       }
@@ -166,12 +180,13 @@ function createHandler({getBlob = () => import("@vercel/blob")}={}) {
         const key=createHash("sha256").update(JSON.stringify([student.class,student.number])).digest("hex");
         await writeJson(blob,studentPrefix(session)+key+".json",{sessionId:session.id,student,
           units,seenAt:new Date().toISOString(),activityAt});
+        snapshotCache.clear();
         return res.status(200).json({ok:true,sessionId:session.id,expiresAt:session.expiresAt});
       }
       if(action==="snapshot"){
         const observer=equalSecret(safeText(body.token,160),session.observerToken);
         if(!observer)return res.status(403).json({error:"この授業の閲覧権限がありません。"});
-        const result=await snapshot(blob,session,session.showNames);
+        const result=await cachedSnapshot(blob,session,session.showNames);
         return res.status(200).json(result);
       }
     }catch(error){

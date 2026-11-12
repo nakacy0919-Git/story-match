@@ -138,7 +138,7 @@ export function ObserverDashboard({token:propToken,embedded=false}){
     const interval=setInterval(refresh,15000);
     return()=>clearInterval(interval);
   },[refresh]);
-  const students=result?.students||[];
+  const students=useMemo(()=>result?.students||[],[result]);
   const getPercent=useCallback(row=>unit==="both"?averageStudent(row):score(row.units?.[unit]?.overall),[unit]);
   const classAverage=mean(students.map(getPercent));
   const ranked=useMemo(()=>{
