@@ -1,0 +1,206 @@
+/* POWER SLIDE cinematic opening: isolated above the existing Treasure Hunt shell. */
+.pso-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  overflow: hidden;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  background: #08030d;
+  color: #fff;
+  font-family: Inter, "Segoe UI", "Noto Sans JP", sans-serif;
+  animation: pso-curtain 5.6s ease-in-out both;
+}
+.pso-vignette {
+  position: absolute;
+  inset: -15%;
+  background:
+    radial-gradient(ellipse 48% 52% at 51% 45%, rgba(114, 18, 66, .54), transparent 75%),
+    radial-gradient(ellipse 56% 50% at 32% 90%, rgba(110, 15, 75, .3), transparent 85%),
+    linear-gradient(130deg, #04020a, #160514 56%, #04020b);
+}
+.pso-vignette::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .16;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255, 255, 255, .08) 4px, transparent 5px);
+}
+.pso-light-beam {
+  position: absolute;
+  width: min(180vw, 1600px);
+  height: 10px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-11deg) scaleX(0);
+  background: linear-gradient(90deg, transparent, #ff3d9d, #fff5fb 50%, #fa4b9f, transparent);
+  box-shadow: 0 0 30px 5px rgba(253, 76, 157, .86), 0 0 130px 26px rgba(250, 34, 120, .38);
+  filter: blur(1px);
+  animation: pso-flash 1.4s 1.65s ease-out both;
+}
+.pso-glow {
+  position: absolute;
+  width: min(140vmax, 1600px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 113, 183, .40) 0 6%, rgba(238, 47, 135, .18) 26%, transparent 63%);
+  opacity: 0;
+  animation: pso-burst 1.9s 1.7s ease-out both;
+  pointer-events: none;
+}
+.pso-halo {
+  position: absolute;
+  width: min(44vmin, 400px);
+  aspect-ratio: 1;
+  border: 2px solid rgba(255, 123, 191, .54);
+  border-radius: 50%;
+  box-shadow: 0 0 20px rgba(255, 44, 141, .48), inset 0 0 14px rgba(255, 44, 141, .22);
+  opacity: 0;
+  pointer-events: none;
+}
+.pso-halo-one { animation: pso-ring 1.8s 1.7s cubic-bezier(.15,.63,.24,1) both; }
+.pso-halo-two { animation: pso-ring 1.7s 1.95s cubic-bezier(.15,.63,.24,1) both; }
+.pso-logo-wrap {
+  position: absolute;
+  width: min(40vmin, 315px);
+  min-width: min(55vw, 180px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  animation: pso-logo-enter 3.25s cubic-bezier(.2,.75,.2,1) both;
+}
+.pso-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 28px rgba(255, 33, 134, .65));
+}
+.pso-title-block {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(92vw, 1000px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  animation: pso-title-in 2.45s 2.85s cubic-bezier(.2,.8,.2,1) both;
+  pointer-events: none;
+}
+.pso-overline {
+  font-size: clamp(10px, 1.65vw, 16px);
+  font-weight: 700;
+  letter-spacing: .58em;
+  color: #f9b3d1;
+  margin: 0 0 clamp(14px, 3vh, 28px);
+  text-shadow: 0 0 20px rgba(255, 62, 153, .7);
+}
+.pso-title {
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(51px, 10.4vmin, 128px);
+  line-height: .94;
+  letter-spacing: .07em;
+  font-weight: 900;
+  font-style: italic;
+  color: #fff;
+  text-shadow: 0 3px 2px rgba(63, 0, 39, .8), 0 0 35px rgba(243, 59, 160, .4);
+}
+.pso-title span:last-child {
+  color: #ffa9d4;
+  letter-spacing: .3em;
+  padding-left: .3em;
+  margin-top: .12em;
+}
+.pso-title-rule {
+  display: block;
+  width: min(54vw, 440px);
+  height: 2px;
+  margin: clamp(14px, 3vh, 26px) 0 12px;
+  background: linear-gradient(90deg, transparent, #ff51aa, #fff5fb, #ff51aa, transparent);
+  box-shadow: 0 0 22px #ff42a1;
+}
+.pso-subtitle {
+  color: #fff0fa;
+  font-size: clamp(10px, 1.55vw, 15px);
+  letter-spacing: .38em;
+  font-weight: 600;
+}
+.pso-skip {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 1;
+  border: 1px solid rgba(255, 190, 220, .48);
+  background: rgba(18, 3, 18, .56);
+  color: #ffe7f4;
+  border-radius: 999px;
+  padding: 10px 19px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  backdrop-filter: blur(8px);
+}
+.pso-skip:hover, .pso-skip:focus-visible {
+  border-color: #ffb6da;
+  background: rgba(180, 26, 93, .5);
+  outline-offset: 3px;
+}
+.pso-progress-label {
+  position: absolute;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  color: #f9c2dc;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .35em;
+  opacity: 0;
+  animation: pso-label-in 1s 4.3s both;
+}
+@keyframes pso-logo-enter {
+  0% { opacity: 0; transform: scale(.68); filter: blur(18px); }
+  16% { opacity: 1; filter: blur(0); }
+  42% { transform: scale(1); opacity: 1; }
+  60% { transform: scale(1.16); opacity: 1; }
+  82% { transform: scale(2.7); opacity: 0; filter: blur(7px); }
+  100% { transform: scale(3.5); opacity: 0; filter: blur(12px); }
+}
+@keyframes pso-flash {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-11deg) scaleX(0); }
+  23% { opacity: 1; transform: translate(-50%, -50%) rotate(-11deg) scaleX(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(-11deg) scaleX(1.4); }
+}
+@keyframes pso-ring {
+  0% { opacity: 0; transform: scale(.55); }
+  16% { opacity: .85; }
+  100% { opacity: 0; transform: scale(4.9); }
+}
+@keyframes pso-burst {
+  0% { opacity: 0; transform: scale(.12); }
+  27% { opacity: .95; }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+@keyframes pso-title-in {
+  0% { opacity: 0; transform: translate(-50%, -40%) scale(1.22); filter: blur(17px); }
+  25% { opacity: 1; filter: blur(0); }
+  62% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes pso-label-in { from { opacity: 0; } to { opacity: .76; } }
+@keyframes pso-curtain { 0%, 89% { opacity: 1; } 100% { opacity: 0; } }
+@media (max-width: 650px) {
+  .pso-logo-wrap { width: min(62vw, 290px); }
+  .pso-overline { letter-spacing: .3em; }
+  .pso-title { font-size: clamp(48px, 12.8vw, 80px); }
+  .pso-subtitle { letter-spacing: .16em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pso-screen, .pso-logo-wrap, .pso-halo, .pso-glow,
+  .pso-light-beam, .pso-title-block, .pso-progress-label { animation: none !important; }
+  .pso-logo-wrap { opacity: 1; transform: none; filter: none; }
+  .pso-title-block { display: none; }
+}
