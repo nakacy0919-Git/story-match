@@ -93,6 +93,7 @@ function App() {
             </button></React.Fragment>)}
         </div>
         <p className="th-sidebar-note">Unitを選択し、学習機能を切り替えてください。Story Matchでは学習記録を保存します。</p>
+        <button type="button" className="th-small" onClick={()=>window.location.hash="#/live-admin"}>📊 授業観察 · 教師用</button>
       </aside>}
     </div>
   </main>;
