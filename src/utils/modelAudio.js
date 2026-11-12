@@ -1,7 +1,7 @@
 // PCM WAV Model recordings currently checked into public/audio (12 scenes per unit).
 // Units without a recording use the device's speech synthesizer immediately,
 // preserving the user gesture needed by Safari/iPad for speech playback.
-export const MODEL_AUDIO_COUNTS = Object.freeze({ 7: 12, 8: 12, 11: 12 });
+export const MODEL_AUDIO_COUNTS = Object.freeze({ 7: 12, 8: 12, 11: 12, 12: 12 });
 export const PLAYBACK_RATES = Object.freeze([0.75, 0.85, 1, 1.25]);
 
 export function hasModelAudio(unit, index) {

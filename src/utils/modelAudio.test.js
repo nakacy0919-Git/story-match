@@ -35,6 +35,13 @@ function fixture() {
 test("only checked-in model recordings are advertised", () => {
   expect(hasModelAudio(7, 0)).toBe(true);
   expect(hasModelAudio(8, 11)).toBe(true);
+  expect(hasModelAudio(11, 0)).toBe(true);
+  expect(hasModelAudio(11, 11)).toBe(true);
+  expect(hasModelAudio(12, 0)).toBe(true);
+  expect(hasModelAudio(12, 11)).toBe(true);
+  expect(hasModelAudio(12, 12)).toBe(false);
+  expect(modelAudioUrl(11, 0)).toContain("/audio/unit11/1.wav");
+  expect(modelAudioUrl(12, 11)).toContain("/audio/unit12/12.wav");
   expect(hasModelAudio(2, 0)).toBe(false);
   expect(hasModelAudio(7, 12)).toBe(false);
   expect(modelAudioUrl(7, 0)).toContain("/audio/unit7/1.wav");
