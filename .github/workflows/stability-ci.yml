@@ -23,6 +23,6 @@ jobs:
       - name: Run regression tests
         run: CI=true npm test -- --watchAll=false --runInBand
       - name: Test settings API
-        run: node --test tests/api-mission-settings.test.cjs
+        run: node --test tests/api-*.test.cjs
       - name: Build production assets
         run: npm run build

@@ -36,7 +36,7 @@ function ActivityIcon({name}) {
 
 function getStudent(){return readStoredJSON("storyMatchStudent",null);}
 function formatSeconds(v){return Number.isFinite(v)?v.toFixed(1)+"s":"—";}
-function summarize(unit,study,story){
+export function summarize(unit,study,story){
  const scenes=allUnitsData[unit]||[];
  const scopes=paragraphOptions(unit).map(x=>x.value);
  const listen=completedListening(study,scopes);

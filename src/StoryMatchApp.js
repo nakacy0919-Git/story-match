@@ -84,7 +84,9 @@ function App({ embedded = false, selectedUnit = null }) {
   ).length;
   const persist = (next) => {
     setProgress(next);
-    setStorageError(!writeStoredJSON(progressKey(student), next));
+    const saved=writeStoredJSON(progressKey(student), next);
+    setStorageError(!saved);
+    if(saved) window.dispatchEvent(new Event("treasure-story-progress-changed"));
   };
   const save = (gameMode, result, extra = {}) => {
     persist(
@@ -155,6 +157,7 @@ function App({ embedded = false, selectedUnit = null }) {
     setProgress(loadProgress(next));
     setRegistered(true);
     setStorageError(!writeStoredJSON("storyMatchStudent", next));
+    window.dispatchEvent(new Event("treasure-student-changed"));
     setView("dashboard");
   };
   if (view === "admin")

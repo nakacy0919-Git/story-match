@@ -3,7 +3,8 @@ import { unitScripts, unitTranslations, unitVocab } from "../treasureData";
 import { allUnitsData } from "../unitsData";
 import { useReadingSpeech } from "../utils/useReadingSpeech";
 import { score } from "../utils/readingScore";
-import { saveQuizResult, saveReadingResult, saveGrammarAnswer } from "../utils/studyProgress";
+import { saveQuizResult, saveReadingResult, saveGrammarAnswer, readUnitStudy } from "../utils/studyProgress";
+import { readStoredJSON } from "../utils/storage";
 import { comprehensionQuestions } from "../utils/comprehensionQuestions";
 import { GlossaryText, WordHelpModal, playAnswerSound, AnswerCelebration } from "./ComprehensionHelpers";
 import "../ComprehensionEffects.css";
@@ -95,13 +96,25 @@ function useBest(key) {
   const save=(n)=>setBest((old)=>{const next=Math.max(old,n);try{localStorage.setItem(key,String(next));}catch(_){}return next;});
   return [best,save];
 }
+
+function makeVocabularyQuestions(words,dir,pool,englishPool) {
+ const reverse=dir==="jaEn";
+ return shuffle(words).map(word=>{
+   const answer=reverse?word.word:word.meaning;
+   const candidates=reverse?englishPool:pool;
+   return {prompt:reverse?word.meaning:word.word,correct:answer,
+     choices:shuffle([answer,...shuffle(candidates.filter(x=>x!==answer)).slice(0,3)])};
+ });
+}
 export function VocabularyPanel({unit,initialDirection="enJa"}) {
  const words=useMemo(()=>getLesson(unit).words.filter(v=>v.word&&v.meaning),[unit]);
  const pool=useMemo(()=>[...new Set(Object.values(unitVocab).flat().map(v=>v.meaning).filter(Boolean))],[]);
  const englishPool=useMemo(()=>[...new Set(Object.values(unitVocab).flat().map(v=>v.word).filter(Boolean))],[]);
  const [direction,setDirection]=useState(initialDirection);
- const [mode,setMode]=useState("study"),[questions,setQuestions]=useState([]),[index,setIndex]=useState(0),
- [answered,setAnswered]=useState(null),[correct,setCorrect]=useState(0);
+ const [mode,setMode]=useState("quiz");
+ const [questions,setQuestions]=useState(()=>makeVocabularyQuestions(words,initialDirection,pool,englishPool));
+ const [index,setIndex]=useState(0),[answered,setAnswered]=useState(null),[correct,setCorrect]=useState(0);
+ const [celebration,setCelebration]=useState(null);
  const [soundOn,setSoundOn]=useState(()=>{
   try{return window.localStorage.getItem("treasurePracticeSound")!=="off";}catch(_){return true;}
  });
@@ -110,54 +123,97 @@ export function VocabularyPanel({unit,initialDirection="enJa"}) {
   try{window.localStorage.setItem("treasurePracticeSound",next?"on":"off");}catch(_){}
   return next;
  });
- useEffect(()=>{setDirection(initialDirection);setMode("study");setIndex(0);setAnswered(null);setCorrect(0);},[unit,initialDirection]);
+ useEffect(()=>{
+   setDirection(initialDirection);setMode("quiz");
+   setQuestions(makeVocabularyQuestions(words,initialDirection,pool,englishPool));
+   setIndex(0);setAnswered(null);setCorrect(0);setCelebration(null);
+ },[unit,initialDirection,words,pool,englishPool]);
  const startQuiz=(dir=direction)=>{
-   const selected=shuffle(words);
-   setQuestions(selected.map(word=>{
-     const reverse=dir==="jaEn",correctAnswer=reverse?word.word:word.meaning;
-     const list=reverse?englishPool:pool;
-     return {prompt:reverse?word.meaning:word.word,correct:correctAnswer,
-       choices:shuffle([correctAnswer,...shuffle(list.filter(x=>x!==correctAnswer)).slice(0,3)])};
-   }));
-   setDirection(dir);setCorrect(0);setAnswered(null);setIndex(0);setMode("quiz");
+   setQuestions(makeVocabularyQuestions(words,dir,pool,englishPool));
+   setDirection(dir);setCorrect(0);setAnswered(null);setIndex(0);
+   setCelebration(null);setMode("quiz");
  };
  const q=questions[index];
+ useEffect(()=>{
+   if(answered===null||mode!=="quiz"||!q)return undefined;
+   const timer=window.setTimeout(()=>{
+     setCelebration(null);
+     if(index===questions.length-1)setMode("result");
+     else{setIndex(i=>i+1);setAnswered(null);}
+   },1400);
+   return ()=>window.clearTimeout(timer);
+ },[answered,index,mode,q,questions.length]);
  const choose=value=>{
-   if(answered!==null)return;
+   if(answered!==null||!q)return;
+   const isCorrect=value===q.correct;
    setAnswered(value);
-   playAnswerSound(value===q.correct,soundOn);
-   const next=correct+(value===q.correct?1:0);
+   setCelebration({correct:isCorrect,question:index});
+   playAnswerSound(isCorrect,soundOn);
+   const next=correct+(isCorrect?1:0);
    setCorrect(next);
-   if(index===questions.length-1&&questions.length)saveQuizResult(unit,"vocabulary",direction,100*next/questions.length);
+   if(index===questions.length-1&&questions.length)
+     saveQuizResult(unit,"vocabulary",direction,100*next/questions.length);
  };
- return <section className="th-panel">
-  <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · VOCABULARY</span>
-   <h2>Vocabulary Training</h2><p>{words.length}語 · 双方向の意味確認</p></header>
-  <div className="th-actions">
-   <button className="th-small" onClick={()=>setMode("study")}>単語一覧</button>
-   <button className="th-primary" disabled={!words.length} onClick={()=>startQuiz("enJa")}>英語 → 日本語</button>
-   <button className="th-primary" disabled={!words.length} onClick={()=>startQuiz("jaEn")}>日本語 → 英語</button>
+ return <section className="th-panel th-vocab-panel">
+  <header className="th-panel-heading">
+   <span className="th-kicker">UNIT {unit} · VOCABULARY</span>
+   <h2>Vocabulary Training</h2>
+   <p>{words.length}語 · クイズから始めて、覚えた単語を確認しましょう。</p>
+  </header>
+  <div className="th-vocab-toolbar">
+   <div className="th-vocab-direction" role="group" aria-label="単語クイズの出題方向">
+    <button type="button" className={direction==="enJa"?"is-active":""}
+      aria-pressed={direction==="enJa"} disabled={!words.length}
+      onClick={()=>startQuiz("enJa")}>英語 → 日本語</button>
+    <button type="button" className={direction==="jaEn"?"is-active":""}
+      aria-pressed={direction==="jaEn"} disabled={!words.length}
+      onClick={()=>startQuiz("jaEn")}>日本語 → 英語</button>
+   </div>
+   <button className="th-small" onClick={()=>setMode(mode==="study"?"quiz":"study")}>
+    {mode==="study"?"クイズに戻る":"単語一覧を見る"}
+   </button>
    <button type="button" className="th-small" aria-label="単語クイズの効果音を切り替え"
      aria-pressed={soundOn} onClick={toggleSound}>{soundOn?"🔊 効果音 ON":"🔇 効果音 OFF"}</button>
   </div>
   {mode==="study"?<div className="th-word-grid">{words.map((w,i)=><div className="th-word-card" key={w.word+i}>
    <b>{w.word}</b><p>{w.meaning}</p></div>)}</div>:
-   mode==="result"?<div className="th-quiz-card"><h3>{correct} / {questions.length}問正解</h3>
-    <p>正解率 {Math.round(100*correct/questions.length)}%</p>
-    <button className="th-primary" onClick={()=>startQuiz()}>もう一度</button></div>:
-   q?<div className="th-quiz-card">
-    <span className="th-kicker">QUESTION {index+1} / {questions.length} · {direction==="enJa"?"EN → JP":"JP → EN"}</span>
-    <h3>{q.prompt}</h3><p>対応する意味・単語を選んでください。</p>
-    <div className="th-choice-grid">{q.choices.map((choice,i)=><button key={i} disabled={answered!==null}
+   mode==="result"?<div className="th-quiz-card th-vocab-result">
+    <span className="th-kicker">QUIZ COMPLETED</span>
+    <h3>{correct} / {questions.length}問正解</h3>
+    <p>正解率 {Math.round(100*correct/(questions.length||1))}%</p>
+    <button className="th-primary" onClick={()=>startQuiz()}>もう一度チャレンジ</button>
+   </div>:
+   q?<div className="th-quiz-card th-vocab-quiz">
+    <div className="th-vocab-progress"><span>QUESTION {index+1} / {questions.length}</span>
+     <span>{direction==="enJa"?"ENGLISH → 日本語":"日本語 → ENGLISH"}</span></div>
+    <div className="th-vocab-meter" aria-hidden="true"><div style={{width:((index+(answered!==null?1:0))*100/questions.length)+"%"}}/></div>
+    <h3>{q.prompt}</h3><p>{direction==="enJa"?"正しい日本語の意味を選んでください。":"対応する英単語を選んでください。"}</p>
+    <div className="th-choice-grid th-vocab-choices">{q.choices.map((choice,i)=><button key={i}
+      type="button" disabled={answered!==null}
       className={"th-choice "+(answered!==null?(choice===q.correct?"correct":choice===answered?"incorrect":""):"")}
-      onClick={()=>choose(choice)}>{choice}</button>)}</div>
-    {answered!==null&&<div className="th-feedback"><strong>{answered===q.correct?"✓ 正解！":"正解："+q.correct}</strong>
-      <button className="th-primary" onClick={()=>{if(index===questions.length-1)setMode("result");else{setIndex(index+1);setAnswered(null);}}}>
-       {index===questions.length-1?"結果へ":"次の問題 →"}</button></div>}
+      onClick={()=>choose(choice)}><span className="th-vocab-letter">{String.fromCharCode(65+i)}</span><span>{choice}</span></button>)}</div>
+    {answered!==null&&<p className="th-vocab-auto-feedback" role="status">
+      {answered===q.correct?"✓ 正解！":"正解："+q.correct}　自動で次の問題に進みます
+    </p>}
    </div>:<p>問題は登録されていません。</p>}
+  <AnswerCelebration result={celebration}/>
  </section>;
 }
+
+function savedComprehensionClears(unit) {
+ const student=readStoredJSON("storyMatchStudent",null);
+ const stored=readUnitStudy(student,unit).comprehension||{};
+ return {en:(stored.en?.best||0)>=100,ja:(stored.ja?.best||0)>=100};
+}
+function ComprehensionPairStatus({cleared}) {
+ return <div className="th-comp-pair-status" aria-label="英語と日本語のクリア状況">
+   <span className={cleared.en?"is-done":""}>{cleared.en?"✓":"○"} English {cleared.en?"CLEAR":"未クリア"}</span>
+   <span className={cleared.ja?"is-done":""}>{cleared.ja?"✓":"○"} 日本語 {cleared.ja?"CLEAR":"未クリア"}</span>
+ </div>;
+}
 export function ComprehensionPanel({unit,initialLanguage="en"}) {
+ const [started,setStarted]=useState(false);
+ const [cleared,setCleared]=useState(()=>savedComprehensionClears(unit));
  const [language,setLanguage]=useState(initialLanguage),[questions,setQuestions]=useState([]),
  [index,setIndex]=useState(0),[answered,setAnswered]=useState(null),
  [correct,setCorrect]=useState(0),[finished,setFinished]=useState(false);
@@ -167,7 +223,8 @@ export function ComprehensionPanel({unit,initialLanguage="en"}) {
  });
  const lesson=getLesson(unit);
  useEffect(()=>{
-   setLanguage(initialLanguage);setQuestions(comprehensionQuestions(unit,initialLanguage));
+   setStarted(false);setCleared(savedComprehensionClears(unit));
+   setLanguage(initialLanguage);setQuestions([]);
    setIndex(0);setAnswered(null);setCorrect(0);setFinished(false);
    setWordHelp(null);setCelebration(null);
  },[unit,initialLanguage]);
@@ -182,9 +239,14 @@ export function ComprehensionPanel({unit,initialLanguage="en"}) {
    document.addEventListener("keydown",handleKey);
    return ()=>document.removeEventListener("keydown",handleKey);
  },[wordHelp]);
- const restart=(lang=language)=>{
-   setLanguage(lang);setQuestions(comprehensionQuestions(unit,lang));
-   setIndex(0);setCorrect(0);setAnswered(null);setFinished(false);setCelebration(null);setWordHelp(null);
+ const begin=(lang)=>{
+   setStarted(true);setLanguage(lang);setQuestions(comprehensionQuestions(unit,lang));
+   setIndex(0);setCorrect(0);setAnswered(null);setFinished(false);
+   setCelebration(null);setWordHelp(null);
+ };
+ const restart=(lang=language)=>begin(lang);
+ const toLanguageSelect=()=>{
+   setStarted(false);setAnswered(null);setCelebration(null);setWordHelp(null);
  };
  const q=questions[index];
  const choose=value=>{
@@ -196,7 +258,9 @@ export function ComprehensionPanel({unit,initialLanguage="en"}) {
    playAnswerSound(isCorrect,soundOn);
    setCelebration({correct:isCorrect,question:index});
    if(index===questions.length-1 && questions.length) {
-     saveQuizResult(unit,"comprehension",language,100*next/questions.length);
+     const percent=100*next/questions.length;
+     saveQuizResult(unit,"comprehension",language,percent);
+     if(percent===100)setCleared(prev=>({...prev,[language]:true}));
    }
  };
  const next=()=>{
@@ -212,27 +276,54 @@ export function ComprehensionPanel({unit,initialLanguage="en"}) {
      return value;
    });
  };
+ const bothCleared=cleared.en&&cleared.ja;
+ const otherLanguage=language==="en"?"ja":"en";
  return <section className="th-panel th-comprehension-panel">
    <header className="th-panel-heading th-comprehension-heading">
      <div><span className="th-kicker">UNIT {unit} · READING COMPREHENSION</span>
-       <h2>内容理解 Check</h2><p>英文・日本語の理解度を、重要文と本文の根拠から確認します。</p></div>
+       <h2>内容理解 Check</h2><p>日本語と英語、両方の問題をクリアしましょう。</p></div>
      <div className="th-comprehension-toolbar">
-       <div className="th-comprehension-tabs" role="group" aria-label="問題の言語">
-         <button type="button" aria-pressed={language==="en"} onClick={()=>restart("en")}>English</button>
-         <button type="button" aria-pressed={language==="ja"} onClick={()=>restart("ja")}>日本語</button>
-       </div>
+       {started&&<button type="button" className="th-comp-return" onClick={toLanguageSelect}>← 言語を選び直す</button>}
        <button type="button" className="th-sound-toggle" aria-label="クイズの効果音を切り替え"
          aria-pressed={soundOn} title={soundOn?"効果音 ON":"効果音 OFF"}
          onClick={toggleSound}>{soundOn?"🔊":"🔇"}</button>
      </div>
    </header>
-   {finished?<div className="th-comp-results" role="status">
+   {!started?<div className="th-comp-language-select">
+     <span className="th-kicker">CHOOSE YOUR CHALLENGE</span>
+     <h3>どちらの言語からチャレンジしますか？</h3>
+     <p className="th-comp-requirement">英語・日本語の両方で <strong>100％正解</strong> すると、この内容理解ミッションをクリアできます。</p>
+     <ComprehensionPairStatus cleared={cleared}/>
+     <div className="th-comp-language-cards">
+       <button type="button" onClick={()=>begin("ja")} aria-label="日本語でチャレンジ">
+         <span className="th-comp-language-icon" aria-hidden="true">🇯🇵</span>
+         <strong>日本語でチャレンジ</strong><small>日本語の問題で本文を理解</small>
+         <span className="th-comp-language-state">{cleared.ja?"✓ CLEAR · 復習する":"START →"}</span>
+       </button>
+       <button type="button" onClick={()=>begin("en")} aria-label="英語でチャレンジ">
+         <span className="th-comp-language-icon" aria-hidden="true">🔤</span>
+         <strong>Challenge in English</strong><small>英語の問題で内容を理解</small>
+         <span className="th-comp-language-state">{cleared.en?"✓ CLEAR · 復習する":"START →"}</span>
+       </button>
+     </div>
+     {bothCleared&&<p className="th-comp-both-clear" role="status">🎉 英語・日本語、両方クリア！</p>}
+   </div>:
+   finished?<div className="th-comp-results" role="status">
       <span className="th-kicker">COMPREHENSION RESULT · {language==="en"?"ENGLISH":"JAPANESE"}</span>
-      <h3>{Math.round(correct*100/questions.length)}%</h3>
+      <h3>{Math.round(correct*100/(questions.length||1))}%</h3>
       <p>{correct} / {questions.length}問正解</p>
-      <button type="button" className="th-primary" onClick={()=>restart()}>もう一度挑戦</button>
+      <ComprehensionPairStatus cleared={cleared}/>
+      {bothCleared?<strong className="th-comp-both-clear">🎉 EN・JP 両方クリア！</strong>:
+       <p className="th-comp-requirement">両方100％正解でクリアです。未クリアの言語にも挑戦しましょう。</p>}
+      <div className="th-comp-result-actions">
+        {!bothCleared&&<button type="button" className="th-primary" onClick={()=>begin(otherLanguage)}>
+           {otherLanguage==="ja"?"日本語に挑戦 →":"英語に挑戦 →"}</button>}
+        <button type="button" className="th-small" onClick={()=>restart()}>この言語をもう一度</button>
+        <button type="button" className="th-small" onClick={toLanguageSelect}>言語選択へ</button>
+      </div>
    </div>:
    q?<div className="th-comprehension-quiz">
+      <ComprehensionPairStatus cleared={cleared}/>
       <div className="th-comprehension-progress">
         <span>QUESTION <strong>{index+1}</strong> / {questions.length}</span>
         <span>{language==="en"?"ENGLISH":"日本語"} · {q.type==="fact"?"内容理解":"重要文"}</span>
@@ -269,14 +360,14 @@ export function ComprehensionPanel({unit,initialLanguage="en"}) {
         </details>}
       </div>}
     </div>:<p>このUnitの内容問題は準備中です。</p>}
-   <WordHelpModal word={wordHelp} onClose={()=>setWordHelp(null)}/>
-   <AnswerCelebration result={celebration}/>
- </section>;
+    <WordHelpModal word={wordHelp} onClose={()=>setWordHelp(null)}/>
+    <AnswerCelebration result={celebration}/>
+  </section>;
 }
-
 export function GrammarPanel({unit}) {
-  const sentences=useMemo(()=>(allUnitsData[unit]||[]).map((x)=>x.en)
-    .filter((s)=>s.split(/\s+/).length>=5&&s.split(/\s+/).length<=16).slice(0,10),[unit]);
+  const sentences=useMemo(()=>(allUnitsData[unit]||[])
+    .filter((item)=>item.en&&item.ja&&item.en.split(/\s+/).length>=5&&item.en.split(/\s+/).length<=16)
+    .slice(0,10),[unit]);
   const [index,setIndex]=useState(0),[picked,setPicked]=useState([]),[checked,setChecked]=useState(false),[,setSolved]=useState([]);
  const [soundOn,setSoundOn]=useState(()=>{
   try{return window.localStorage.getItem("treasurePracticeSound")!=="off";}catch(_){return true;}
@@ -288,8 +379,8 @@ export function GrammarPanel({unit}) {
  });
   const [best,saveBest]=useBest("th-grammar-best:"+unit);
   useEffect(()=>{setIndex(0);setPicked([]);setChecked(false);setSolved([]);},[unit]);
-  const sentence=sentences[index]||"";
-  const words=useMemo(()=>sentence.split(/\s+/).filter(Boolean),[sentence]);
+  const sentence=sentences[index]||{en:"",ja:""};
+  const words=useMemo(()=>sentence.en.split(/\s+/).filter(Boolean),[sentence.en]);
   const positions=useMemo(()=>{const a=shuffle(words.map((_,i)=>i));return a.every((n,i)=>n===i)?a.reverse():a;},[words]);
   const correct=picked.length===words.length&&picked.every((n,i)=>n===i);
   const check=()=>{if(checked)return;setChecked(true);playAnswerSound(correct,soundOn);saveGrammarAnswer(unit,index,correct,sentences.length);if(correct){setSolved((old)=>{const next=[...new Set([...old,index])];saveBest(next.length);return next;});}};
@@ -297,12 +388,13 @@ export function GrammarPanel({unit}) {
     <header className="th-panel-heading"><span className="th-kicker">UNIT {unit} · GRAMMAR</span><h2>Sentence Builder</h2>
       <p>実際の本文を使った語順並び替え練習 · ベスト {best} 問正解</p></header>
     {sentences.length?<div className="th-quiz-card"><span className="th-kicker">SENTENCE {index+1}/{sentences.length}</span>
-      <p>単語をタップして正しい英文を完成させましょう。</p>
+      <p>日本語の意味をヒントに、単語を正しい語順に並べましょう。</p>
+      <p className="th-grammar-translation" lang="ja" aria-label="並び替える英文の日本語訳"><span aria-hidden="true">🇯🇵</span> {sentence.ja}</p>
       <div className="th-assembled">{picked.length?picked.map((n,i)=><button key={i} disabled={checked}
         onClick={()=>setPicked((arr)=>arr.filter((_,j)=>j!==i))}>{words[n]}</button>):"ここに選択した単語が表示されます"}</div>
       <div className="th-token-grid">{positions.filter((n)=>!picked.includes(n)).map((n)=><button key={n}
         onClick={()=>setPicked((a)=>[...a,n])}>{words[n]}</button>)}</div>
-      {checked&&<div className="th-feedback"><strong>{correct?"✓ 正解！":"惜しい！語順を確認しましょう。"}</strong><p>{sentence}</p></div>}
+      {checked&&<div className="th-feedback"><strong>{correct?"✓ 正解！":"惜しい！語順を確認しましょう。"}</strong><p>{sentence.en}</p></div>}
       <div className="th-actions"><button className="th-small" onClick={()=>{setPicked([]);setChecked(false);}}>リセット</button>
         <button type="button" className="th-small" aria-label="英文並び替えの効果音を切り替え"
           aria-pressed={soundOn} onClick={toggleSound}>{soundOn?"🔊 効果音 ON":"🔇 効果音 OFF"}</button>
