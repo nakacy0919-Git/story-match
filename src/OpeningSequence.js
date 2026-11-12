@@ -47,7 +47,6 @@ export default function OpeningSequence({ onFinish }) {
           alt="POWER SLIDE"
           width="300"
           height="300"
-          fetchPriority="high"
         />
       </div>
       <div className="pso-title-block" aria-label="TREASURE HUNT">
