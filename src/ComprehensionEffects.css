@@ -16,8 +16,8 @@
 .th-comp-question{font-size:clamp(17px,2vw,24px);line-height:1.65;color:#193f6c;font-weight:850;margin:4px 0 2px;white-space:pre-wrap;overflow-wrap:anywhere}
 .th-comp-hint{font-size:11px;color:#7e91a7;margin:0 0 11px}
 .th-comprehension-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.th-comprehension-choice{display:flex;align-items:center;gap:10px;min-width:0;min-height:65px;padding:12px 15px;line-height:1.5;
- font-size:clamp(12px,1.25vw,15px);cursor:pointer;background:#fff;overflow-wrap:anywhere}
+.th-comprehension-choice{display:flex;align-items:center;gap:10px;min-width:0;min-height:72px;padding:14px 17px;line-height:1.55;
+ font-size:clamp(15px,1.5vw,19px);font-weight:800;cursor:pointer;background:#fff;overflow-wrap:anywhere}
 .th-comprehension-choice>span:last-child{min-width:0;flex:1}
 .th-comprehension-choice:focus-visible{outline:3px solid #5a9df5;outline-offset:2px}
 .th-comprehension-choice[aria-disabled="true"]{cursor:default}
@@ -84,4 +84,42 @@
 @media(prefers-reduced-motion:reduce){
  .th-answer-overlay,.th-answer-emblem,.th-answer-main,.th-answer-sub,.th-answer-confetti span{animation:none!important}
  .th-comp-progress-track>div{transition:none}
+}
+
+
+/* Bilingual comprehension: select the language first and clear both modes. */
+.th-comp-return{background:#f7fbff;border:1px solid #c7dbea;color:#2e638c;border-radius:9px;
+  min-height:39px;padding:7px 12px;font-size:13px;font-weight:800}
+.th-comp-language-select{display:grid;gap:15px;justify-items:center;text-align:center;
+  background:linear-gradient(155deg,#f6faff,#eff7ff);border:1px solid #d6e7f5;
+  border-radius:17px;padding:clamp(22px,3.5vw,38px)}
+.th-comp-language-select h3{font-size:clamp(20px,2.55vw,30px);line-height:1.4;
+  color:#1d4c78;font-weight:900;margin:0}
+.th-comp-requirement{font-size:clamp(14px,1.4vw,17px)!important;
+  line-height:1.6!important;color:#3f6582!important;margin:0!important}
+.th-comp-requirement strong{color:#125f97}
+.th-comp-pair-status{display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:center;margin:8px 0 13px}
+.th-comp-pair-status span{background:#fff;border:1px solid #bfd2e3;border-radius:24px;
+  color:#566f87;padding:8px 14px;font-weight:850;font-size:clamp(12px,1.1vw,15px)}
+.th-comp-pair-status span.is-done{background:#e2f8ed;border-color:#78cfa5;color:#147350}
+.th-comp-language-cards{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.th-comp-language-cards button{display:flex;flex-direction:column;align-items:center;gap:9px;
+  min-width:0;min-height:215px;padding:24px 15px;border-radius:15px;
+  background:#fff;border:2px solid #c7dcf0;color:#1d4e78;cursor:pointer;
+  box-shadow:0 5px 14px #215d9110}
+.th-comp-language-cards button:hover,.th-comp-language-cards button:focus-visible{
+  border-color:#288fbd;background:#f7fcff}
+.th-comp-language-icon{font-size:34px}
+.th-comp-language-cards button strong{font-size:clamp(18px,1.9vw,24px);font-weight:900}
+.th-comp-language-cards button small{font-size:clamp(12px,1vw,14px);line-height:1.45;color:#66839c}
+.th-comp-language-state{font-size:15px;font-weight:900;color:#1b7b9f;margin-top:auto}
+.th-comp-both-clear{font-size:clamp(18px,2vw,25px)!important;font-weight:900!important;
+ color:#16806a!important;margin:2px 0!important}
+.th-comp-result-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.th-comprehension-quiz>.th-comp-pair-status{margin-top:0;justify-content:flex-start}
+@media(max-width:620px){
+  .th-comp-language-cards{grid-template-columns:1fr}
+  .th-comp-language-cards button{min-height:155px;padding:16px 10px}
+  .th-comp-pair-status{gap:5px}
+  .th-comprehension-choice{font-size:15px;min-height:59px}
 }
