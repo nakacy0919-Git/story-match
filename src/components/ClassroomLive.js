@@ -151,7 +151,7 @@ export function ObserverDashboard({token:propToken,embedded=false}){
       return true;
     }).sort((a,b)=>sort==="slow"?getPercent(a)-getPercent(b):sort==="ahead"?getPercent(b)-getPercent(a):
       a.student.class.localeCompare(b.student.class,"ja")||a.student.number.localeCompare(b.student.number,"ja",{numeric:true}));
-  },[students,filter,sort,getPercent,classAverage,lastFetch]);
+  },[students,filter,sort,getPercent,classAverage]);
   const online=students.filter(s=>Date.now()-Date.parse(s.seenAt)<90000).length;
   const needHelp=students.filter(s=>getPercent(s)<classAverage-15).length;
   return <main className={"th-live-observer "+(embedded?"is-embedded":"")}>
