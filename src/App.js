@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import StoryMatchApp from "./StoryMatchApp";
+import OpeningSequence from "./OpeningSequence";
 import { allUnitsData } from "./unitsData";
 import { readStoredJSON, writeStoredJSON } from "./utils/storage";
 import {
@@ -35,7 +36,8 @@ function App() {
     return units.includes(last)?last:1;
   });
   const [scope,setScope]=useState("full");
-  const [panel,setPanel]=useState("welcome");
+  const [panel,setPanel]=useState("progress");
+  const [showOpening,setShowOpening]=useState(true);
   const [variant,setVariant]=useState(null);
   const paragraphs=paragraphOptions(unit);
   const changeUnit=(next)=>{
@@ -95,6 +97,7 @@ function App() {
         <p className="th-sidebar-note">Unitを選択し、学習機能を切り替えてください。Story Matchでは学習記録を保存します。</p>
       </aside>}
     </div>
+    {showOpening&&<OpeningSequence onFinish={()=>setShowOpening(false)}/>}
   </main>;
 }
 export default App;

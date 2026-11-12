@@ -165,9 +165,12 @@ test("Shadowing shares the same fixed panel and single recording control",()=>{
 });
 
 
-test("initial screen asks users to select a unit, then opens 12-ring analytics",()=>{
+test("Power Slide opening reveals Learning Progress with 12-ring analytics",()=>{
  render(<App/>);
- expect(screen.getByText("Select a Unit")).toBeInTheDocument();
+ expect(screen.getByRole("dialog",{name:"POWER SLIDE オープニング"})).toBeInTheDocument();
+ expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
+ fireEvent.click(screen.getByRole("button",{name:/スキップ/}));
+ expect(screen.queryByRole("dialog",{name:"POWER SLIDE オープニング"})).toBeNull();
  expect(screen.queryByRole("heading",{name:"Reading Script"})).toBeNull();
  fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
  expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
