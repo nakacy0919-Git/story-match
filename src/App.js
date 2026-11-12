@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import StoryMatchApp from "./StoryMatchApp";
 import { allUnitsData } from "./unitsData";
 import { readStoredJSON, writeStoredJSON } from "./utils/storage";
@@ -9,6 +9,7 @@ import {
 import TreasureAudio from "./components/TreasureAudio";
 import LearningDashboard, { ListeningMissionPanel } from "./components/LearningDashboard";
 import WorkbookQuizPanel from "./components/WorkbookQuizPanel";
+import { ClassroomJoinSync, ObserverDashboard, TeacherLiveDashboard } from "./components/ClassroomLive";
 import "./LearningAnalytics.css";
 import "./App.css";
 import "./TreasureShell.css";
@@ -29,7 +30,7 @@ const buttons=[
   {id:"listening-study",name:"Listening Mission",sub:"各段落を3回聞く",icon:"🔊"},
   {id:"story",name:"Story Match",sub:"4つのゲームモード",icon:"🧩"},
 ];
-function App() {
+function StudentApp() {
   const [unit,setUnit]=useState(()=>{
     const last=Number(readStoredJSON("storyMatchLastUnit",1));
     return units.includes(last)?last:1;
@@ -46,7 +47,7 @@ function App() {
   const openPanel=(target,nextVariant=null)=>{setVariant(nextVariant);setPanel(target);if(target==="reading"||target==="shadowing")setScope("full");};
   const lesson=getLesson(unit,scope);
   const current=buttons.find((b)=>b.id===panel)||buttons[0];
-  return <main className="th-shell">
+  return <main className="th-shell"><ClassroomJoinSync/>
     <nav className="th-unit-strip" aria-label="ユニットを選択">
       {units.map((n)=><button key={n} className={panel!=="welcome"&&n===unit?"active":""}
         aria-pressed={panel!=="welcome"&&n===unit} onClick={()=>changeUnit(n)}>Unit {n}</button>)}
@@ -97,5 +98,16 @@ function App() {
       </aside>}
     </div>
   </main>;
+}
+function App(){
+  const [route,setRoute]=useState(()=>window.location.hash||"");
+  useEffect(()=>{
+    const update=()=>setRoute(window.location.hash||"");
+    window.addEventListener("hashchange",update);
+    return()=>window.removeEventListener("hashchange",update);
+  },[]);
+  if(route.startsWith("#/observe"))return <ObserverDashboard/>;
+  if(route.startsWith("#/live-admin"))return <TeacherLiveDashboard/>;
+  return <StudentApp/>;
 }
 export default App;

@@ -22,3 +22,25 @@ test("live snapshot sends exactly both units and existing twelve-progress catego
   expect(snapshot.units["12"].workbook).toHaveProperty("workbookGrammar");
   expect(readUnitStudy(student,11).vocabulary.enJa.best).toBe(80);
 });
+ 
+
+test("teacher controls and observer dashboard are reachable through their own QR routes",()=>{
+  const React=require("react");
+  const {render,screen,cleanup,act}=require("@testing-library/react");
+  const App=require("./App").default;
+  const previous=window.location.hash;
+  try {
+    window.location.hash="#/live-admin";
+    const teacher=render(React.createElement(App));
+    expect(screen.getByText("授業観察ライブ｜管理画面")).toBeTruthy();
+    expect(screen.getByText("管理者パスワード")).toBeTruthy();
+    teacher.unmount();
+    window.location.hash="#/observe";
+    const viewer=render(React.createElement(App));
+    expect(screen.getByText("公開授業｜学習進捗ダッシュボード")).toBeTruthy();
+    viewer.unmount();
+  } finally {
+    window.location.hash=previous;
+    cleanup();
+  }
+});
