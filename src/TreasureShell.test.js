@@ -167,10 +167,12 @@ test("Shadowing shares the same fixed panel and single recording control",()=>{
 });
 
 
-test("initial screen asks users to select a unit, then opens 12-ring analytics",()=>{
+test("initial screen opens Learning Progress with the share QR and 12-ring analytics",()=>{
  render(<App/>);
- expect(screen.getByText("Select a Unit")).toBeInTheDocument();
+ expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
+ expect(screen.getByRole("dialog",{name:"POWER SLIDE オープニング"})).toBeInTheDocument();
  expect(screen.queryByRole("heading",{name:"Reading Script"})).toBeNull();
+ expect(screen.getByRole("link",{name:"友達にStory Matchを紹介するQRコード"})).toHaveAttribute("href","https://story-match.vercel.app/");
  fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
  expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
  expect(document.querySelectorAll(".th-analytics-card")).toHaveLength(12);
