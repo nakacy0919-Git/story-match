@@ -11,7 +11,7 @@ test("observer and learner links use separate hash routes, leaving secrets out o
   expect(parseJoinCode("#/join?code=abcc34")).toBe("ABCC34");
   expect(parseJoinCode("#/observe?token=something")).toBe("");
 });
-test("live snapshot sends exactly both units and existing twelve-progress categories",()=>{
+test("live snapshot sends exactly both units and existing eleven-progress categories",()=>{
   const student={class:"3-6",number:"3",name:"Test Student"};
   localStorage.setItem("storyMatchStudent",JSON.stringify(student));
   saveQuizResult(11,"vocabulary","enJa",80);
@@ -20,6 +20,8 @@ test("live snapshot sends exactly both units and existing twelve-progress catego
   expect(snapshot.student).toEqual(student);
   expect(Object.keys(snapshot.units)).toEqual(["11","12"]);
   expect(Object.keys(snapshot.units["11"].metrics)).toEqual(LIVE_METRICS.map(v=>v[0]));
+  expect(LIVE_METRICS).toHaveLength(11);
+  expect(snapshot.units["11"].metrics).not.toHaveProperty("shadow");
   expect(snapshot.units["11"].metrics.vocabE).toBe(80);
   expect(snapshot.units["12"].metrics.compJa).toBe(100);
   expect(snapshot.units["12"].workbook).toHaveProperty("workbookGrammar");

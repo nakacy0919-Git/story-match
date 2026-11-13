@@ -2,7 +2,7 @@
 // Never expose BLOB_READ_WRITE_TOKEN or student records directly to the browser.
 const { randomBytes, createHash, timingSafeEqual } = require("node:crypto");
 const PATH = "treasure-live/v1/";
-const METRIC_KEYS = ["reading","compEn","compJa","shadow","listen","vocabE","vocabJ","grammar","storyRead","puzzle","random","storyListen"];
+const METRIC_KEYS = ["reading","compEn","compJa","listen","vocabE","vocabJ","grammar","storyRead","puzzle","random","storyListen"];
 const WORKBOOK_KEYS = ["workbookReading","workbookGrammar","workbookVarious"];
 const attempts = new Map();
 const snapshotCache = new Map();

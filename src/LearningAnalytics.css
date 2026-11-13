@@ -133,3 +133,8 @@
 .th-analytics-sections{gap:10px}
 .th-activity-icon{width:35px;height:35px}
 }
+
+/* READING & COMPREHENSION now has three cards. */
+.th-analytics-group[data-tone="sky"] .th-analytics-cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:920px){.th-analytics-group[data-tone="sky"] .th-analytics-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.th-analytics-group[data-tone="sky"] .th-analytics-cards{grid-template-columns:minmax(0,1fr)}}

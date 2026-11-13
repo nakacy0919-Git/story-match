@@ -27,7 +27,6 @@ const buttons=[
   {id:"vocabulary",name:"Vocabulary",sub:"単語と4択クイズ",icon:"📝"},
   {id:"grammar",name:"Grammar",sub:"英文の並び替え",icon:"🔤"},
   {id:"reading",name:"Reading Check",sub:"音読判定",icon:"🎙️"},
-  {id:"shadowing",name:"Shadowing",sub:"音声に続けて音読",icon:"🎧"},
   {id:"listening-study",name:"Listening Mission",sub:"各段落を3回聞く",icon:"🔊"},
   {id:"story",name:"Story Match",sub:"4つのゲームモード",icon:"🧩"},
 ];
@@ -46,7 +45,7 @@ function StudentApp() {
     setUnit(next);setScope("full");setPanel("progress");setVariant(null);
     writeStoredJSON("storyMatchLastUnit",next);
   };
-  const openPanel=(target,nextVariant=null)=>{setVariant(nextVariant);setPanel(target);if(target==="reading"||target==="shadowing")setScope("full");};
+  const openPanel=(target,nextVariant=null)=>{setVariant(nextVariant);setPanel(target);if(target==="reading")setScope("full");};
   const lesson=getLesson(unit,scope);
   const current=buttons.find((b)=>b.id===panel)||buttons[0];
   return <main className="th-shell"><ClassroomJoinSync/>
@@ -61,7 +60,7 @@ function StudentApp() {
             <strong>{current.icon} {current.name}</strong></div>
           <div className="th-stage-sub">{scope==="full"?"Full Text":"Paragraph "+scope.slice(1)}</div>
         </div>}
-        <div className={"th-stage-content "+(panel==="story"?"is-story":panel==="reading"||panel==="shadowing"?"is-reading":"")}>
+        <div className={"th-stage-content "+(panel==="story"?"is-story":panel==="reading"?"is-reading":"")}>
           {panel==="welcome"&&<div className="th-unit-welcome"><div className="th-welcome-orbit">◎</div><span>YOUR LEARNING JOURNEY</span><h1>Select a Unit</h1><p>上の Unit 1〜15 から学習するUnitを選んでください。</p><small>選択後、円形ゲージの学習分析画面が開きます。</small></div>}
           {panel==="progress"&&<LearningDashboard unit={unit} onOpen={openPanel}/>}
           {panel==="script"&&<ScriptPanel unit={unit} scope={scope}/>}
@@ -71,7 +70,6 @@ function StudentApp() {
           {panel.startsWith("workbook-")&&<WorkbookQuizPanel unit={unit} section={panel} onOpen={openPanel}/>}
           {panel==="grammar"&&<GrammarPanel unit={unit}/>}
           {panel==="reading"&&<ReadingPractice unit={unit} scope={scope}/>}
-          {panel==="shadowing"&&<ReadingPractice unit={unit} scope={scope} shadowing/>}
           {panel==="story"&&<StoryMatchApp embedded selectedUnit={unit}/>}
           {panel==="listening-study"&&<ListeningMissionPanel unit={unit} scope={scope} onScope={setScope}/>}
         </div>
