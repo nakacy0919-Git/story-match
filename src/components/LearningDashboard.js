@@ -20,7 +20,6 @@ function ActivityIcon({name}) {
   reading:<><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></>,
   compEn:<><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></>,
   compJa:<><path d="M4 5h12M10 3v3M6 7c1 5 4 8 9 10M15 7c-1 4-5 8-10 10M14 21l4-10 4 10M16 17h4"/></>,
-  shadow:<><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><rect x="2" y="13" width="5" height="8" rx="2"/><rect x="17" y="13" width="5" height="8" rx="2"/></>,
   listen:<><path d="M3 9v6h4l5 4V5L7 9H3zM16 9a5 5 0 0 1 0 6M19 5a10 10 0 0 1 0 14"/></>,
   vocabE:<><path d="M12 6c-3-2-6-2-10-1v14c4-1 7-1 10 1V6zM12 6c3-2 6-2 10-1v14c-4-1-7-1-10 1V6zM12 6v14"/><path d="M5 9h4M15 9h4"/></>,
   vocabJ:<><path d="M4 7h15l-3-3M19 7l-3 3M20 17H5l3-3M5 17l3 3"/><path d="M10 11h4M12 9v4"/></>,
@@ -55,7 +54,6 @@ export function summarize(unit,study,story){
  {key:"reading",name:"本文音読",value:study.reading?.full?.best||0,meta:"Best "+(study.reading?.full?.best||0)+"% · "+(study.reading?.full?.attempts||0)+"回",panel:"reading"},
  {key:"compEn",name:"内容把握 EN",value:study.comprehension?.en?.best||0,meta:(study.comprehension?.en?.attempts||0)+"回 · 英語の設問",panel:"comprehension",variant:"en"},
  {key:"compJa",name:"内容把握 JP",value:study.comprehension?.ja?.best||0,meta:(study.comprehension?.ja?.attempts||0)+"回 · 日本語の設問",panel:"comprehension",variant:"ja"},
- {key:"shadow",name:"シャドーイング",value:study.shadowing?.full?.best||0,meta:"Best "+(study.shadowing?.full?.best||0)+"% · "+(study.shadowing?.full?.attempts||0)+"回",panel:"shadowing"}
  ]},
  {name:"VOCABULARY & SKILLS",tone:"teal",items:[
  {key:"listen",name:"段落リスニング",value:listen.percent,meta:listen.count+" / "+listen.total+" 段落で3回達成",panel:"listening-study"},
@@ -103,14 +101,14 @@ export default function LearningDashboard({unit,onOpen}) {
    <ShareAppQR/>
    <div className="th-analytics-intro"><span className="th-analytics-kicker">LEARNING ANALYTICS · UNIT {unit}</span>
     <h2>Learning Progress</h2>
-    <p>12の学習スキルを分析。カードから練習へ進めます。</p>
+    <p>11の学習スキルを分析。カードから練習へ進めます。</p>
     {validStudent(student)?<div className="th-learner-name">● {student.name} <span>{student.class} · {student.number}番</span><button className="th-switch-learner" onClick={()=>{setDraft({class:"",number:"",name:""});setEditing(true);}}>変更</button></div>:
       <span className="th-learner-name">学習記録を保存するには登録してください</span>}
    </div>
    <Ring value={details.overall} size="large"/>
    <div className="th-analytics-summary">
     <span>COMPLETED</span><strong>{details.complete}<small> / {details.total}</small></strong>
-    <p>12項目の達成度を均等集計</p>
+    <p>11項目の達成度を均等集計</p>
     <button type="button" onClick={()=>onOpen("script")}>本文から学ぶ →</button>
    </div>
   </section>

@@ -8,7 +8,7 @@ export const LIVE_JOIN_STORAGE="treasure-live-join:v1";
 export const LIVE_PROGRESS_EVENT="treasure-story-progress-changed";
 export const LIVE_METRICS=[
   ["reading","本文音読"],["compEn","内容理解 EN"],["compJa","内容理解 JP"],
-  ["shadow","シャドーイング"],["listen","段落リスニング"],
+  ["listen","段落リスニング"],
   ["vocabE","単語 EN→JP"],["vocabJ","単語 JP→EN"],["grammar","英文並び替え"],
   ["storyRead","じっくり学習"],["puzzle","パズル"],["random","ランダム"],["storyListen","ゲームリスニング"],
 ];

@@ -56,9 +56,9 @@ test("case, spacing and full-width numerals do not cause false grading errors",(
  expect(matchesOrder(["The","small","car","is","red"],[0,1,2,3,4],"The small car is red.")).toBe(true);
  expect(matchesOrder(["The","small","car","is","red"],[2,0,1,3,4],"The small car is red.")).toBe(false);
 });
-test("Unit10 shows three separate workbook categories without changing original 12 metrics",()=>{
+test("Unit10 shows three separate workbook categories alongside the remaining 11 learning skills",()=>{
  visit(10);
- expect(document.querySelectorAll(".th-analytics-card")).toHaveLength(12);
+ expect(document.querySelectorAll(".th-analytics-card")).toHaveLength(11);
  expect(document.querySelectorAll(".th-wb-dashboard-card")).toHaveLength(3);
  expect(screen.getByRole("button",{name:/Reading Questions.*問題集の読解設問/})).toBeInTheDocument();
  expect(screen.getByRole("button",{name:/Grammar & Writing.*問題集の文法・英作文/})).toBeInTheDocument();

@@ -35,13 +35,14 @@ const units={
       workbook:{workbookReading:70}},
   12:{metrics:{reading:70,vocabJ:95},workbook:{workbookGrammar:40}},
 };
-test("progress payload is constrained to Units 11 and 12 and 12 valid numeric metrics",()=>{
+test("progress payload is constrained to Units 11 and 12 and 11 valid numeric metrics",()=>{
   const result=cleanSnapshot({units:{"11":{metrics:{reading:200,compEn:-5,shadow:"bad"},workbook:{workbookReading:999}},"99":{}}});
   assert.deepEqual(Object.keys(result),["11","12"]);
   assert.equal(result["11"].metrics.reading,100);
   assert.equal(result["11"].metrics.compEn,0);
+   assert.equal(Object.hasOwn(result["11"].metrics,"shadow"),false);
   assert.equal(result["11"].workbook.workbookReading,100);
-  assert.equal(Object.keys(result["11"].metrics).length,12);
+  assert.equal(Object.keys(result["11"].metrics).length,11);
 });
 test("create is admin only, observer is read only, names masked, join is controlled and close revokes",async()=>{
   const oldAdmin=process.env.STORY_MATCH_ADMIN_PASSWORD;

@@ -157,17 +157,17 @@ test("the same recording button starts and stops and updates the semicircle Accu
   expect(screen.getByRole("button",{name:"🎙 音読スタート"})).toHaveAttribute("aria-pressed","false");
   expect(screen.getByRole("img",{name:"Accuracy 100%"})).toBeInTheDocument();
 });
-test("Shadowing shares the same fixed panel and single recording control",()=>{
-  window.SpeechRecognition=ReadingDockSpeechMock;
-  boot();
-  fireEvent.click(screen.getByRole("button",{name:/Shadowing.*音声に続けて音読/}));
-  expect(document.querySelector(".th-stage-content")).toHaveClass("is-reading");
-  expect(screen.getByRole("region",{name:"音読する英文（スクロール可能）"})).toBeInTheDocument();
-  expect(document.querySelector(".th-reading-dock")).toBeInTheDocument();
+test("Shadowing is removed but Reading Check stays usable",()=>{
+ window.SpeechRecognition=ReadingDockSpeechMock;
+ boot();
+ expect(screen.queryByRole("button",{name:/Shadowing/})).toBeNull();
+ fireEvent.click(screen.getByRole("button",{name:/Reading Check.*音読判定/}));
+ expect(screen.getByRole("heading",{name:"Reading Check"})).toBeInTheDocument();
+ expect(document.querySelector(".th-reading-dock")).toBeInTheDocument();
 });
 
 
-test("initial screen opens Learning Progress with the share QR and 12-ring analytics",()=>{
+test("initial screen opens Learning Progress with the share QR and 11-ring analytics",()=>{
  render(<App/>);
  expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
  expect(screen.getByRole("dialog",{name:"POWER SLIDE オープニング"})).toBeInTheDocument();
@@ -175,13 +175,15 @@ test("initial screen opens Learning Progress with the share QR and 12-ring analy
  expect(screen.getByRole("link",{name:"友達にStory Matchを紹介するQRコード"})).toHaveAttribute("href","https://story-match.vercel.app/");
  fireEvent.click(screen.getByRole("button",{name:"Unit 10"}));
  expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeInTheDocument();
- expect(document.querySelectorAll(".th-analytics-card")).toHaveLength(12);
- expect(screen.getByText(/12項目の達成度/)).toBeInTheDocument();
+ expect(document.querySelectorAll(".th-analytics-card")).toHaveLength(11);
+ expect(screen.getByText(/11項目の達成度/)).toBeInTheDocument();
  expect(document.querySelectorAll(".th-analytics-group")).toHaveLength(3);
  document.querySelectorAll(".th-analytics-group").forEach(group=>{
-   expect(group.querySelectorAll(".th-analytics-card")).toHaveLength(4);
+   expect(group.querySelectorAll(".th-analytics-card")).toHaveLength(group.dataset.tone==="sky"?3:4);
  });
- expect(document.querySelectorAll(".th-activity-icon svg")).toHaveLength(12);
+ expect(document.querySelectorAll(".th-activity-icon svg")).toHaveLength(11);
+ expect(screen.queryByText("シャドーイング")).toBeNull();
+ expect(document.querySelector(".th-analytics-summary")).toHaveTextContent("/ 11");
  expect(document.querySelector(".th-analytics-listening")).toBeNull();
  expect(document.querySelector(".th-stage-top")).toBeNull();
  expect(screen.getAllByRole("heading",{name:"Learning Progress"})).toHaveLength(1);

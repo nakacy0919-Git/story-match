@@ -189,7 +189,7 @@ export function ObserverDashboard({token:propToken,embedded=false}){
           return <tr key={row.student.class+":"+row.student.number}>
             <td><strong>{row.student.class} · {row.student.number}番</strong>
               {row.student.name&&<small>{row.student.name}</small>}
-              <details className="th-live-detail"><summary>12項目を詳しく見る</summary>
+              <details className="th-live-detail"><summary>11項目を詳しく見る</summary>
                 {[11,12].map(n=><div key={n} className="th-live-detail-unit"><b>UNIT {n}</b>
                   {LIVE_METRICS.map(([key,label])=><div key={key} className="th-live-detail-line">
                     <span>{label}</span><StatusMeter value={row.units?.[String(n)]?.metrics?.[key]}/></div>)}

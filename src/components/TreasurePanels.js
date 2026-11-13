@@ -417,20 +417,20 @@ function AccuracyGauge({percent}) {
   </div>;
 }
 
-export function ReadingPractice({unit,scope,shadowing=false}) {
+export function ReadingPractice({unit,scope}) {
   const lesson=getLesson(unit,scope);
   const [percent,setPercent]=useState(null),[transcript,setTranscript]=useState("");
-  const mic=useReadingSpeech(lesson.en,(value,spoken)=>{setPercent(value);setTranscript(spoken);saveReadingResult(unit,scope,shadowing,value);},
+  const mic=useReadingSpeech(lesson.en,(value,spoken)=>{setPercent(value);setTranscript(spoken);saveReadingResult(unit,scope,value);},
     score,"th:"+unit+":"+scope,80);
-  useEffect(()=>{setPercent(null);setTranscript("");},[unit,scope,shadowing]);
+  useEffect(()=>{setPercent(null);setTranscript("");},[unit,scope]);
   const isListening=mic.phase==="listening";
   const isScoring=mic.phase==="scoring";
   const displayTranscript=mic.transcript||transcript||"ここに認識された英文が表示されます。";
   return <section className="th-panel th-reading-panel">
     <header className="th-panel-heading th-reading-heading">
-      <div><span className="th-kicker">UNIT {unit} · {shadowing?"SHADOWING":"READING"}</span>
-        <h2>{shadowing?"Shadowing Practice":"Reading Check"}</h2></div>
-      <p>{shadowing?"右のモデル音声に続けて発話しましょう。イヤホンを推奨します。":"本文はここだけスクロール。下のボタンで音読開始／終了・判定を切り替えます。"}</p>
+      <div><span className="th-kicker">UNIT {unit} · READING</span>
+        <h2>Reading Check</h2></div>
+      <p>本文はここだけスクロール。下のボタンで音読開始／終了・判定を切り替えます。</p>
     </header>
     <div className="th-reading-scroll" role="region" aria-label="音読する英文（スクロール可能）" tabIndex={0}>
       <div className="th-practice-text">{lesson.en||"この範囲の英文は登録されていません。"}</div>

@@ -17,8 +17,8 @@ export function saveQuizResult(unit,category,direction,score){
  return updateStudy(unit,category,old=>{const prior=old[direction]||{};
  return {...old,[direction]:{attempts:(prior.attempts||0)+1,best:Math.max(prior.best||0,pct(score)),last:pct(score)}};});
 }
-export function saveReadingResult(unit,scope,shadowing,accuracy){
- return updateStudy(unit,shadowing?"shadowing":"reading",old=>{const prior=old[scope]||{};
+export function saveReadingResult(unit,scope,accuracy){
+ return updateStudy(unit,"reading",old=>{const prior=old[scope]||{};
  return {...old,[scope]:{attempts:(prior.attempts||0)+1,best:Math.max(prior.best||0,pct(accuracy)),last:pct(accuracy)}};});
 }
 export function saveGrammarAnswer(unit,index,correct,count){
