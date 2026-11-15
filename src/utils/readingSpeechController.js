@@ -18,6 +18,7 @@ export function createReadingSpeechController({
     transcript: "",
     interimTranscript: "",
     recoveries: 0,
+    emptyEnds: 0,
     signals: { audio: false, voice: false, text: false },
     healthTimer: null,
     stopTimer: null,
@@ -129,11 +130,13 @@ export function createReadingSpeechController({
       });
       return;
     }
+    host.dispatchEvent?.(new Event("powerslide-mic-start"));
     host.speechSynthesis?.cancel();
     cancel();
     state.recording = true;
     state.stopRequested = false;
     state.recoveries = 0;
+    state.emptyEnds = 0;
     state.transcript = "";
     state.interimTranscript = "";
     state.signals = { audio: false, voice: false, text: false };
@@ -170,9 +173,10 @@ export function createReadingSpeechController({
         state.recognition === r &&
         state.item?.id === item.id;
       const previousTranscript = state.transcript;
+      let receivedText = false;
       state.healthTimer = host.setTimeout(() => {
         state.healthTimer = null;
-        if (!current() || state.stopRequested || state.signals.text) return;
+        if (!current() || state.stopRequested || receivedText) return;
         if (state.recoveries >= 1) {
           cancel();
           paint({
@@ -222,6 +226,9 @@ export function createReadingSpeechController({
           if (text) (result.isFinal ? finals : interims).push(text);
         }
         if (!finals.length && !interims.length) return;
+        receivedText = true;
+        state.emptyEnds = 0;
+        state.recoveries = 0;
         host.clearTimeout(state.healthTimer);
         state.healthTimer = null;
         state.transcript = [previousTranscript, ...finals]
@@ -267,6 +274,11 @@ export function createReadingSpeechController({
         state.recognition = null;
         detach(r);
         if (state.recording && !state.stopRequested) {
+          if (!receivedText && ++state.emptyEnds >= 3) {
+            cancel();
+            paint({ status: "音声認識が繰り返し中断されました。「マイクを再接続」で再挑戦してください。" });
+            return;
+          }
           if (state.interimTranscript) {
             state.transcript = [state.transcript, state.interimTranscript]
               .filter(Boolean)
