@@ -393,7 +393,7 @@ export function GrammarPanel({unit}) {
       <div className="th-assembled">{picked.length?picked.map((n,i)=><button key={i} disabled={checked}
         onClick={()=>setPicked((arr)=>arr.filter((_,j)=>j!==i))}>{words[n]}</button>):"ここに選択した単語が表示されます"}</div>
       <div className="th-token-grid">{positions.filter((n)=>!picked.includes(n)).map((n)=><button key={n}
-        onClick={()=>setPicked((a)=>[...a,n])}>{words[n]}</button>)}</div>
+        disabled={checked} onClick={()=>setPicked((a)=>a.includes(n)?a:[...a,n])}>{words[n]}</button>)}</div>
       {checked&&<div className="th-feedback"><strong>{correct?"✓ 正解！":"惜しい！語順を確認しましょう。"}</strong><p>{sentence.en}</p></div>}
       <div className="th-actions"><button className="th-small" onClick={()=>{setPicked([]);setChecked(false);}}>リセット</button>
         <button type="button" className="th-small" aria-label="英文並び替えの効果音を切り替え"

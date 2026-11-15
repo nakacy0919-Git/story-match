@@ -115,3 +115,18 @@ test("empty recognition does not overwrite a score, and missing end uses the 160
   jest.advanceTimersByTime(2000);
   expect(scores).toHaveLength(1);
 });
+
+
+test("three consecutive empty native endings stop automatic reconnection", () => {
+  engine.begin();
+  for (let i=0;i<3;i++) {
+    latest.onend();
+    jest.advanceTimersByTime(250);
+  }
+  jest.advanceTimersByTime(12000);
+  expect(instances).toHaveLength(3);
+  expect(changes.at(-1).phase).toBe("idle");
+  expect(scores).toHaveLength(0);
+  engine.reconnect();
+  expect(instances).toHaveLength(4);
+});

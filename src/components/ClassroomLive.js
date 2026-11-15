@@ -47,24 +47,27 @@ function QrCard({url,title,description}){
   </div>;
 }
 
+const readJoinCode=()=>{try{return window.localStorage.getItem(LIVE_JOIN_STORAGE)||"";}catch(_){return "";}};
+const storeJoinCode=value=>{try{if(value)window.localStorage.setItem(LIVE_JOIN_STORAGE,value);else window.localStorage.removeItem(LIVE_JOIN_STORAGE);}catch(_){/* Live sharing is optional; local learning remains available. */}};
+
 export function ClassroomJoinSync(){
-  const [code,setCode]=useState(()=>parseJoinCode(window.location.hash)||localStorage.getItem(LIVE_JOIN_STORAGE)||"");
-  const [draftCode,setDraftCode]=useState(()=>parseJoinCode(window.location.hash)||localStorage.getItem(LIVE_JOIN_STORAGE)||"");
+  const [code,setCode]=useState(()=>parseJoinCode(window.location.hash)||readJoinCode());
+  const [draftCode,setDraftCode]=useState(()=>parseJoinCode(window.location.hash)||readJoinCode());
   const [open,setOpen]=useState(()=>!!parseJoinCode(window.location.hash));
   const [status,setStatus]=useState("");
   const [connected,setConnected]=useState(false);
   const busy=useRef(false);
   const sync=useCallback(async()=>{
     if(!code||busy.current)return;
-    const record=readLocalLiveRecord();
-    if(!record){setStatus("Learning Progressでクラス・番号・氏名を登録すると自動で同期されます。");return;}
     busy.current=true;
     try{
+      const record=readLocalLiveRecord();
+      if(!record){setStatus("Learning Progressでクラス・番号・氏名を登録すると自動で同期されます。");return;}
       await classroomRequest({action:"join",code:code.trim().toUpperCase(),...record});
       setConnected(true);setStatus("授業進捗を共有中 · 自動更新");
     }catch(e){
       setConnected(false);setStatus(e.message);
-      if(e.status===410){localStorage.removeItem(LIVE_JOIN_STORAGE);setCode("");}
+      if(e.status===410){storeJoinCode("");setCode("");}
     }finally{busy.current=false;}
   },[code]);
   useEffect(()=>{
@@ -83,7 +86,7 @@ export function ClassroomJoinSync(){
   useEffect(()=>{
     const onHash=()=>{
       const next=parseJoinCode(window.location.hash);
-      if(next){setCode(next);setDraftCode(next);setOpen(true);localStorage.setItem(LIVE_JOIN_STORAGE,next);}
+      if(next){setCode(next);setDraftCode(next);setOpen(true);storeJoinCode(next);}
     };
     window.addEventListener("hashchange",onHash);return()=>window.removeEventListener("hashchange",onHash);
   },[]);
@@ -91,11 +94,11 @@ export function ClassroomJoinSync(){
     event.preventDefault();
     const normalized=draftCode.trim().toUpperCase();
     if(!/^[A-F0-9]{12}$/.test(normalized)){setStatus("12桁の授業参加コードを入力してください。");return;}
-    localStorage.setItem(LIVE_JOIN_STORAGE,normalized);
+    storeJoinCode(normalized);
     setCode(normalized);setOpen(false);setStatus("授業の参加情報を確認しています。");
-    sync();
+    // The code-change effect starts sync using the newly selected code.
   };
-  const leave=()=>{localStorage.removeItem(LIVE_JOIN_STORAGE);setCode("");setDraftCode("");setConnected(false);setStatus("");setOpen(false);};
+  const leave=()=>{storeJoinCode("");setCode("");setDraftCode("");setConnected(false);setStatus("");setOpen(false);};
   return <div className={"th-live-join "+(connected?"is-connected":"")}>
     <div className="th-live-join-line">
       <span aria-hidden="true">{connected?"🟢":"📡"}</span>

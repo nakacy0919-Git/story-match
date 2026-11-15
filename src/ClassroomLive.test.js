@@ -46,3 +46,12 @@ test("teacher controls and observer dashboard are reachable through their own QR
     cleanup();
   }
 });
+
+
+test("student workspace still opens if browser storage is blocked",()=>{
+  const get=jest.spyOn(Storage.prototype,"getItem").mockImplementation(()=>{throw new Error("blocked");});
+  try{
+    render(<App/>);
+    expect(screen.getByRole("heading",{name:"Learning Progress"})).toBeTruthy();
+  }finally{get.mockRestore();}
+});

@@ -83,7 +83,7 @@ function StudentApp() {
             {paragraphs.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </div>
-        <TreasureAudio key={unit+"-"+scope} unit={unit} scope={scope} text={lesson.en}/>
+        <TreasureAudio key={unit+"-"+scope+"-"+panel} unit={unit} scope={scope} text={lesson.en}/>
         <div className="th-sidebar-buttons">
           {buttons.filter((b)=>!b.id.startsWith("workbook-")||unit>=10).map((b)=><React.Fragment key={b.id}>
             {(b.id==="workbook-reading"||b.id==="vocabulary"||b.id==="reading"||b.id==="story")&&<div className="th-side-separator"/>}

@@ -25,49 +25,67 @@ export default function TreasureAudio({unit,scope}) {
   const audioRef=useRef(null);
   const loop=useRef({start:null,end:null});
   const [loopInfo,setLoopInfo]=useState({start:null,end:null});
-  const spoken=useRef(false);
-  const stop=()=>{
-    if(audioRef.current) {audioRef.current.pause();audioRef.current=null;}
-    try {window.speechSynthesis?.cancel();}catch(_){}
-    spoken.current=false;setPlaying(false);
+  const playbackId=useRef(0);
+  const utteranceRef=useRef(null);
+  const release=()=>{
+    playbackId.current++;
+    const a=audioRef.current;audioRef.current=null;
+    if(a){a.onended=null;a.onerror=null;a.ontimeupdate=null;try{a.pause();}catch(_){}}
+    const u=utteranceRef.current;utteranceRef.current=null;
+    if(u){u.onend=null;u.onerror=null;try{window.speechSynthesis?.cancel();}catch(_){}}
   };
-  useEffect(()=>()=>{if(audioRef.current)audioRef.current.pause();window.speechSynthesis?.cancel();},[unit,scope]);
-  const playSpeech=()=>{
+  const stop=()=>{release();setPlaying(false);};
+  useEffect(()=>{
+    const interrupt=()=>{release();setPlaying(false);};
+    window.addEventListener("powerslide-mic-start",interrupt);
+    return()=>{window.removeEventListener("powerslide-mic-start",interrupt);release();};
+    // This player is keyed by unit, scope and panel.
+  },[]);
+  const playSpeech=(id)=>{
+    if(id!==playbackId.current)return;
     const text=getLesson(unit,scope).en;
     if(!text||!window.speechSynthesis||!window.SpeechSynthesisUtterance){
       setError("この範囲の音声を再生できません。");setPlaying(false);return;
     }
     try {
-      window.speechSynthesis.cancel();
       const u=new window.SpeechSynthesisUtterance(text);
+      utteranceRef.current=u;
       u.lang="en-US";u.rate=rate;
-      const voices=window.speechSynthesis.getVoices();
+      const voices=window.speechSynthesis.getVoices?.()||[];
       u.voice=voices.find((v)=>v.lang==="en-US")||voices.find((v)=>v.lang?.startsWith("en"))||null;
-      u.onend=()=>{if(spoken.current)completed();spoken.current=false;setPlaying(false);};
-      u.onerror=()=>{spoken.current=false;setPlaying(false);setError("音声合成に失敗しました。ブラウザで再試行してください。");};
-      window.speechSynthesis.speak(u);spoken.current=true;setPlaying(true);setSource("音声合成");
-    }catch(_){setError("音声合成を開始できません。");setPlaying(false);}
+      u.onend=()=>{if(id!==playbackId.current||utteranceRef.current!==u)return;utteranceRef.current=null;playbackId.current++;completed();setPlaying(false);};
+      u.onerror=()=>{if(id!==playbackId.current||utteranceRef.current!==u)return;utteranceRef.current=null;playbackId.current++;setPlaying(false);setError("音声合成に失敗しました。もう一度再生してください。");};
+      window.speechSynthesis.cancel();
+      setPlaying(true);setSource("音声合成");
+      window.speechSynthesis.speak(u);
+    }catch(_){if(id===playbackId.current){release();setError("音声合成を開始できません。");setPlaying(false);}}
   };
   const play=()=>{
     setError("");
     if(playing){stop();return;}
-    if(audioRef.current&&audioRef.current.paused){
-      audioRef.current.play().then(()=>setPlaying(true)).catch(()=>playSpeech());return;
-    }
-    if(!hasTreasureAudio(unit,scope)){playSpeech();return;}
-    const a=new window.Audio(treasureAudioUrl(unit,scope));
+    release();
+    const id=playbackId.current;
+    setPlaying(true);
+    if(!hasTreasureAudio(unit,scope)){playSpeech(id);return;}
+    let a;
+    try{a=new window.Audio(treasureAudioUrl(unit,scope));}catch(_){playSpeech(id);return;}
     audioRef.current=a;a.playbackRate=rate;a.preload="auto";
+    const active=()=>id===playbackId.current&&audioRef.current===a;
+    const fallback=()=>{
+      if(!active())return;
+      a.onended=null;a.onerror=null;a.ontimeupdate=null;
+      try{a.pause();}catch(_){}
+      audioRef.current=null;playSpeech(id);
+    };
     a.ontimeupdate=()=>{
+      if(!active())return;
       const p=loop.current;
       if(p.start!==null&&p.end!==null&&a.currentTime>=p.end){a.currentTime=p.start;}
     };
-    a.onended=()=>{setPlaying(false);completed();};
-    a.onerror=()=>{
-      if(audioRef.current===a){a.pause();audioRef.current=null;playSpeech();}
-    };
-    a.play().then(()=>{setPlaying(true);setSource("モデル音声 MP3");}).catch(()=>{
-      a.pause();audioRef.current=null;playSpeech();
-    });
+    a.onended=()=>{if(!active())return;release();setPlaying(false);completed();};
+    a.onerror=fallback;
+    setSource("モデル音声 MP3");
+    try{Promise.resolve(a.play()).catch(fallback);}catch(_){fallback();}
   };
   const seek=(seconds)=>{
     const a=audioRef.current;
@@ -90,16 +108,16 @@ export default function TreasureAudio({unit,scope}) {
     <span className="th-side-heading">🎧 Audio Player <small>{scope==="full"?"全文":scope.toUpperCase()} {listenCount}/3 回完聴</small></span>
     <button className="th-audio-play" onClick={play}>{playing?"■ Stop Audio":"▶ Play Audio"}</button>
     <div className="th-audio-row">
-      <button onClick={()=>seek(-5)} title="5秒戻る">◀ 5s</button>
+      <button disabled={!hasTreasureAudio(unit,scope)||source==="音声合成"} onClick={()=>seek(-5)} title="5秒戻る">◀ 5s</button>
       <select aria-label="再生速度" value={rate} onChange={(e)=>changeRate(e.target.value)}>
         {speeds.map((v)=><option value={v} key={v}>{v}×</option>)}
       </select>
-      <button onClick={()=>seek(5)} title="5秒進む">5s ▶</button>
+      <button disabled={!hasTreasureAudio(unit,scope)||source==="音声合成"} onClick={()=>seek(5)} title="5秒進む">5s ▶</button>
     </div>
     <div className="th-audio-row th-ab-controls">
-      <button onClick={()=>setLoop("start")}>A 開始</button>
-      <button onClick={()=>setLoop("end")}>B 終了</button>
-      <button onClick={clearLoop}>解除</button>
+      <button disabled={!hasTreasureAudio(unit,scope)||source==="音声合成"} onClick={()=>setLoop("start")}>A 開始</button>
+      <button disabled={!hasTreasureAudio(unit,scope)||source==="音声合成"} onClick={()=>setLoop("end")}>B 終了</button>
+      <button disabled={!hasTreasureAudio(unit,scope)||source==="音声合成"} onClick={clearLoop}>解除</button>
     </div>
     <small>{source||(hasTreasureAudio(unit,scope)?"モデル音声を優先":"英語音声合成で再生")}</small>
     {loopInfo.start!==null&&<small>A {loopInfo.start.toFixed(1)}s{loopInfo.end!==null?" – B "+loopInfo.end.toFixed(1)+"s":""}</small>}

@@ -4,7 +4,7 @@ export const STUDY_CHANGED="treasure-study-progress-changed";
 export const validStudent=s=>!!(s&&typeof s.class==="string"&&s.class.trim()&&String(s.number||"").trim()&&typeof s.name==="string"&&s.name.trim());
 export const studyKey=s=>validStudent(s)?"treasureStudy:v1:"+profileKey(s):null;
 export function readStudy(s){const k=studyKey(s);if(!k)return {};const x=readStoredJSON(k,{});return x&&!Array.isArray(x)&&typeof x==="object"?x:{};}
-export const readUnitStudy=(s,unit)=>readStudy(s)[unit]||{};
+export const readUnitStudy=(s,unit)=>{const value=readStudy(s)[unit];return value&&typeof value==="object"&&!Array.isArray(value)?value:{}};
 export const emitStudyChange=()=>window.dispatchEvent(new Event(STUDY_CHANGED));
 export function updateStudy(unit,category,fn){
  const s=readStoredJSON("storyMatchStudent",null),key=studyKey(s);if(!key)return false;
