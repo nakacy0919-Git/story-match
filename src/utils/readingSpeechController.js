@@ -63,7 +63,7 @@ export function createReadingSpeechController({
       try {
         r.abort();
       } catch (_) {}
-    paint({ phase: "idle" });
+    paint(state.item?.autoJudge ? { phase: "idle", status: "マイクを押して発音してください。" } : { phase: "idle" });
   }
   function setItem(item) {
     cancel();
