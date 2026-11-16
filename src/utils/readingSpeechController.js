@@ -234,7 +234,7 @@ export function createReadingSpeechController({
         }
         if (!finals.length && !interims.length) return;
         if (item.autoJudge) {
-          // A final browser result, not a speculative interim hypothesis, is judged.
+          // A matching interim hypothesis may pass immediately in word practice.
           // Never accumulate a previous incorrect attempt into the next attempt.
           const newlyFinal = finals.slice(autoFinalCount);
           autoFinalCount = finals.length;
@@ -244,19 +244,22 @@ export function createReadingSpeechController({
           host.clearTimeout(state.healthTimer);
           state.healthTimer = null;
           autoTimeout();
+          const candidate = [heard, interim].filter(Boolean).join(" ");
+          const percent = calculate(item.sentence, candidate).percent;
+          if (percent >= getThreshold()) {
+            cancel(); // invalidate queued events before reporting success
+            paint({transcript:candidate,status:"✓ CORRECT!"});
+            onScore(percent,candidate,item.id);
+            return;
+          }
+          // Nonmatching interim speech may still be revised; only final misses
+          // prompt a retry. The next attempt is evaluated independently.
           if (!heard) {
             if (interim) paint({transcript:interim,status:"発音を認識中…"});
             return;
           }
-          const percent = calculate(item.sentence, heard).percent;
-          if (percent >= getThreshold()) {
-            cancel(); // invalidates even queued events before reporting success
-            paint({transcript:heard,status:"✓ CORRECT!"});
-            onScore(percent,heard,item.id);
-          } else {
-            paint({transcript:heard,status:"もう一度発音してください。"});
-            onScore(percent,heard,item.id);
-          }
+          paint({transcript:heard,status:"もう一度発音してください。"});
+          onScore(calculate(item.sentence, heard).percent,heard,item.id);
           return;
         }
         host.clearTimeout(state.healthTimer);

@@ -9,7 +9,9 @@ import "./ReadingWordHelp.css";
 // Practice a word or phrase without the name exclusions used in scene scoring.
 export function wordPracticeScore(expected, spoken) {
   const a=words(expected), b=words(spoken);
-  return {percent:a.length && a.length===b.length && a.every((v,i)=>v===b[i])?100:0};
+  // Accept the exact target as whole consecutive tokens inside a transcript.
+  // Extra recognized words must not prevent success or allow substring matches.
+  return {percent:a.length && b.some((_,i)=>a.every((v,j)=>v===b[i+j]))?100:0};
 }
 
 function SpeakerButton({label,disabled,onClick}) {
