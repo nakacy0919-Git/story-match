@@ -160,3 +160,20 @@
   .reading-studio.is-reading-focus .reading-controls > button,
   .reading-studio.is-reading-focus .reading-controls > .primary { padding: 6px 9px; font-size: 12px; }
 }
+
+/* Inline colors never change font metrics or the left-aligned reading layout. */
+.reading-studio .reading-english .karaoke-read { color: #16834e; }
+.reading-studio .reading-english .karaoke-current {
+  color: #174fa6;
+  background-color: #dceaff;
+  border-radius: 0.12em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.reading-studio .reading-english .karaoke-unread { color: #58677a; }
+.reading-studio .reading-karaoke-toggle[aria-pressed="true"] {
+  background: #e2efff;
+  border-color: #719bd2;
+  color: #183f70;
+}
+.reading-studio .reading-audio-toolbar { flex-wrap: wrap; }
