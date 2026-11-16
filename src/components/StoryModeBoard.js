@@ -3,6 +3,10 @@ import { score, createFeedback } from "../utils/readingScore";
 import ReadingCelebration from "./ReadingCelebration";
 import { useReadingSpeech } from "../utils/useReadingSpeech";
 import { createModelAudioPlayer, PLAYBACK_RATES } from "../utils/modelAudio";
+import { readingWords } from "../utils/readingKaraoke";
+import "./ReadingFocus.css";
+import ReadingWordModal from "./ReadingWordModal";
+import { lookupReadingWord } from "../utils/readingWordHelp";
 
 function Scene({
   item,
@@ -21,6 +25,19 @@ function Scene({
     [spoken, setSpoken] = useState("");
   const [audioError, setAudioError] = useState("");
   const [playbackRate, setPlaybackRate] = useState(0.85);
+  const [showImage, setShowImage] = useState(true);
+  const [showJapanese, setShowJapanese] = useState(true);
+  const [focusMode, setFocusMode] = useState(false);
+  const [karaokeEnabled, setKaraokeEnabled] = useState(true);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [activeOffset, setActiveOffset] = useState(null);
+  const [wordEntry, setWordEntry] = useState(null);
+  useEffect(() => {
+    if (!focusMode) return;
+    const exit = (event) => { if (event.key === "Escape") setFocusMode(false); };
+    window.addEventListener("keydown", exit);
+    return () => window.removeEventListener("keydown", exit);
+  }, [focusMode]);
   const playerRef = useRef(null);
   if (!playerRef.current) playerRef.current = createModelAudioPlayer();
   const [celebration, setCelebration] = useState(0);
@@ -44,10 +61,14 @@ function Scene({
     `${unit}:${index}`,
     threshold,
   );
-  const stopAudio = () => playerRef.current.stop();
+  const stopAudio = () => {
+    playerRef.current.stop();
+    setAudioPlaying(false);
+    setActiveOffset(null);
+  };
   useEffect(
     () => () => {
-      stopAudio();
+      playerRef.current.stop();
       clearTimeout(celebrationTimer.current);
     },
     [],
@@ -58,16 +79,22 @@ function Scene({
     clearTimeout(celebrationTimer.current);
     setSpoken("");
     setAudioError("");
+    setWordEntry(null);
     stopAudio();
   }, [unit, index]);
   const play = () => {
+    if (audioPlaying) { stopAudio(); return; }
     setAudioError("");
+    setActiveOffset(null);
+    setAudioPlaying(true);
     playerRef.current.play({
       unit,
       index,
       text: item.en,
       rate: playbackRate,
-      onError: setAudioError,
+      onProgress: setActiveOffset,
+      onEnd: () => { setAudioPlaying(false); setActiveOffset(item.en.length); },
+      onError: (message) => { setAudioError(message); setAudioPlaying(false); setActiveOffset(null); },
     });
   };
   const tapFeedback = () => {
@@ -75,9 +102,31 @@ function Scene({
     feedback.current.tone("tap");
   };
   const passed = best >= threshold || (result !== null && result >= threshold);
+  const isKaraoke = karaokeEnabled && activeOffset !== null;
+  const openWord = (word) => {
+    if (mic.phase !== "idle") return;
+    const entry = lookupReadingWord(unit, item.en, word.start, word.text);
+    if (!entry) return;
+    stopAudio();
+    mic.cancel();
+    setWordEntry(entry);
+  };
+  const highlightedText = () => {
+    let previous = 0;
+    const parts = [];
+    for (const word of readingWords(item.en)) {
+      parts.push(item.en.slice(previous, word.start));
+      const style = !isKaraoke ? "" : word.start === activeOffset ? "karaoke-current" : word.start < activeOffset ? "karaoke-read" : "karaoke-unread";
+      parts.push(<button type="button" key={word.start} className={"rw-inline "+style} disabled={mic.phase !== "idle"} title="タップして意味・発音を確認" onClick={()=>openWord(word)}>{word.text}</button>);
+      previous = word.end;
+    }
+    parts.push(item.en.slice(previous));
+    return parts;
+  };
   return (
-    <section className="reading-studio">
+    <section className={"reading-studio" + (focusMode ? " is-reading-focus" : "")} aria-label="じっくり学習">
       {celebration > 0 && <ReadingCelebration id={celebration} />}
+      {wordEntry && <ReadingWordModal entry={wordEntry} context={item} onClose={()=>setWordEntry(null)}/>}
       <div className="reading-top">
         <span>
           Scene {index + 1} / {total}
@@ -86,26 +135,40 @@ function Scene({
           {passed ? "✓ CLEAR" : `Accuracy ${threshold}%以上で合格`}
         </span>
       </div>
+      <div className="reading-view-tools" role="group" aria-label="音読の表示設定">
+        <button type="button" className="subtle" aria-pressed={showImage} onClick={() => setShowImage(v => !v)}>
+          🖼 画像 {showImage ? "ON" : "OFF"}
+        </button>
+        <button type="button" className="subtle" aria-pressed={showJapanese} onClick={() => setShowJapanese(v => !v)}>
+          和訳 {showJapanese ? "ON" : "OFF"}
+        </button>
+        <button type="button" className="subtle reading-focus-toggle" aria-pressed={focusMode} onClick={() => setFocusMode(v => !v)}>
+          {focusMode ? "⊡ 通常表示に戻る" : "⛶ 全画面音読"}
+        </button>
+      </div>
       <div
         className={
-          "reading-main " +
+          "reading-main " + (showImage ? "" : "reading-no-image ") +
           (item.en.length + item.ja.length * 0.5 > 130 ? "dense" : "")
         }
       >
-        <div className="reading-image">
+        <div className="reading-image" hidden={!showImage}>
           <img
             src={`${process.env.PUBLIC_URL}/images/unit${unit}/${index + 1}.webp`}
             alt={"Scene " + (index + 1)}
           />
         </div>
-        <div className="reading-text">
+        <div className="reading-text" role="region" aria-label="音読する英文" tabIndex={0}>
           <div className="reading-audio-toolbar">
             <button
               className="subtle"
               disabled={mic.phase !== "idle"}
               onClick={play}
             >
-              🔊 お手本を聞く
+              {audioPlaying ? "■ お手本を停止" : "🔊 お手本を聞く"}
+            </button>
+            <button type="button" className="subtle reading-karaoke-toggle" aria-pressed={karaokeEnabled} onClick={() => setKaraokeEnabled(v => !v)}>
+              カラオケ {karaokeEnabled ? "ON" : "OFF"}
             </button>
             <label className="audio-speed-control">
               再生速度
@@ -124,8 +187,8 @@ function Scene({
               </select>
             </label>
           </div>
-          <p className="reading-english">{item.en}</p>
-          <p className="reading-japanese">{item.ja}</p>
+          <p className="reading-english">{highlightedText()}</p>
+          {showJapanese && <p className="reading-japanese">{item.ja}</p>}
         </div>
       </div>
       <div className="reading-evaluation">
@@ -167,6 +230,7 @@ function Scene({
           disabled={index === 0 || mic.phase !== "idle"}
           onClick={() => {
             mic.cancel();
+            stopAudio();
             onPrev();
           }}
         >
@@ -208,6 +272,7 @@ function Scene({
           disabled={!passed || mic.phase !== "idle"}
           onClick={() => {
             mic.cancel();
+            stopAudio();
             if (index === total - 1) onBack();
             else onNext();
           }}

@@ -1,0 +1,179 @@
+/* Display-only controls for the Story Match reading mission. */
+.reading-view-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.reading-view-tools .subtle {
+  min-height: 36px;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+.reading-view-tools .subtle[aria-pressed="true"] {
+  background: #e2efff;
+  border-color: #719bd2;
+  color: #183f70;
+}
+.reading-view-tools .reading-focus-toggle {
+  margin-left: auto;
+  background: #275b93;
+  color: #fff;
+  border-color: #275b93;
+}
+.reading-studio .reading-main .reading-image[hidden] { display: none; }
+.reading-studio .reading-main .reading-text {
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+}
+.reading-studio .reading-main .reading-text > * { flex-shrink: 0; }
+.reading-studio .reading-main .reading-english {
+  font-size: clamp(20px, 2.7vw, 40px);
+  line-height: 1.45;
+  text-align: left;
+  margin-block: auto;
+  padding-block: 12px;
+}
+.reading-studio .reading-main.reading-no-image .reading-text {
+  width: 100%;
+  padding-inline: clamp(14px, 4vw, 64px);
+}
+.reading-studio .reading-main.reading-no-image .reading-english {
+  font-size: clamp(25px, 4vw, 64px);
+}
+.reading-studio.is-reading-focus {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  box-sizing: border-box;
+  padding: max(8px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  background: #f1f5fb;
+  overflow-y: auto;
+  gap: 8px;
+}
+/* Hide background controls from keyboard navigation while focused. */
+.th-shell:has(.is-reading-focus) .th-unit-strip,
+.th-shell:has(.is-reading-focus) .th-sidebar,
+.app-shell:has(.is-reading-focus) > .app-header,
+.app-shell:has(.is-reading-focus) .game-toolbar {
+  visibility: hidden;
+}
+.reading-studio.is-reading-focus .reading-main {
+  flex: 1 0 160px;
+  min-height: 160px;
+}
+.reading-studio.is-reading-focus .reading-main .reading-image {
+  width: 47%;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(5px, 0.8vw, 12px);
+}
+.reading-studio.is-reading-focus .reading-main .reading-text {
+  padding: clamp(12px, 2vw, 32px);
+}
+.reading-studio.is-reading-focus .reading-main .reading-english {
+  font-size: clamp(24px, 3.7vw, 60px);
+  line-height: 1.4;
+}
+.reading-studio.is-reading-focus .reading-main.reading-no-image .reading-english {
+  font-size: clamp(30px, 5.6vw, 88px);
+}
+.reading-studio.is-reading-focus .reading-evaluation {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 6px;
+  min-height: 0;
+  max-height: none;
+}
+.reading-studio.is-reading-focus .reading-evaluation .accuracy {
+  width: clamp(76px, 9vw, 120px);
+  padding: 3px 5px;
+  border-radius: 10px;
+}
+.reading-studio.is-reading-focus .reading-evaluation .accuracy strong {
+  font-size: 25px;
+  line-height: 1.1;
+}
+.reading-studio.is-reading-focus .reading-evaluation .accuracy small { font-size: 12px; }
+.reading-studio.is-reading-focus .reading-evaluation .transcript {
+  padding: 5px 8px;
+  border-radius: 10px;
+}
+.reading-studio.is-reading-focus .reading-evaluation .transcript p {
+  max-height: 2.5em;
+  margin: 2px 0;
+  font-size: 12px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.reading-studio.is-reading-focus .reading-evaluation .reconnect-mic {
+  position: static;
+  align-self: center;
+  min-height: 36px;
+  padding: 5px 8px;
+  white-space: normal;
+  max-width: 110px;
+}
+.reading-studio.is-reading-focus .reading-controls {
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.reading-studio.is-reading-focus .reading-controls > button {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 40px;
+  padding: 6px 12px;
+  font-size: 13px;
+  line-height: 1.2;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.reading-studio.is-reading-focus .reading-controls > .primary {
+  padding: 6px 12px;
+}
+@media (orientation: portrait) {
+  .reading-studio.is-reading-focus .reading-main { flex-direction: column; }
+  .reading-studio.is-reading-focus .reading-main:not(.reading-no-image) .reading-image {
+    width: 100%; height: 42%; flex: 0 0 42%;
+  }
+  .reading-studio.is-reading-focus .reading-main .reading-text { flex: 1 1 0; }
+  .reading-studio.is-reading-focus .reading-main .reading-english {
+    font-size: clamp(23px, 5vw, 46px);
+  }
+  .reading-studio.is-reading-focus .reading-main.reading-no-image .reading-english {
+    font-size: clamp(28px, 7vw, 64px);
+  }
+}
+@media (max-width: 700px) {
+  .reading-studio .reading-view-tools .subtle { min-height: 34px; padding: 6px 8px; font-size: 12px; }
+  .reading-studio.is-reading-focus .reading-evaluation .reconnect-mic { max-width: 80px; }
+  .reading-studio.is-reading-focus .reading-controls > button,
+  .reading-studio.is-reading-focus .reading-controls > .primary { padding: 6px 9px; font-size: 12px; }
+}
+
+/* Inline colors never change font metrics or the left-aligned reading layout. */
+.reading-studio .reading-english .karaoke-read { color: #16834e; }
+.reading-studio .reading-english .karaoke-current {
+  color: #174fa6;
+  background-color: #dceaff;
+  border-radius: 0.12em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.reading-studio .reading-english .karaoke-unread { color: #58677a; }
+.reading-studio .reading-karaoke-toggle[aria-pressed="true"] {
+  background: #e2efff;
+  border-color: #719bd2;
+  color: #183f70;
+}
+.reading-studio .reading-audio-toolbar { flex-wrap: wrap; }

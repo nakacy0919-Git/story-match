@@ -1,3 +1,5 @@
+import { readingWords, readingOffsetAt, estimatedReadingSeconds } from "./readingKaraoke";
+
 // PCM WAV Model recordings currently checked into public/audio (12 scenes per unit).
 // Units without a recording use the device's speech synthesizer immediately,
 // preserving the user gesture needed by Safari/iPad for speech playback.
@@ -18,13 +20,24 @@ export function createModelAudioPlayer(win = window) {
   let playbackId = 0;
   let audio = null;
   let utterance = null;
+  let progressTimer = null;
+  const clearProgress = () => {
+    if (progressTimer !== null) win.clearInterval?.(progressTimer);
+    progressTimer = null;
+  };
+  const watchProgress = (callback) => {
+    clearProgress();
+    if (typeof win.setInterval === "function") progressTimer = win.setInterval(callback, 60);
+  };
   const failedUrls = new Set();
   const stop = () => {
     playbackId += 1;
+    clearProgress();
     if (audio) {
       audio.onplaying = null;
       audio.onerror = null;
       audio.onended = null;
+      audio.ontimeupdate = null;
       try { audio.pause(); } catch (_) { /* not playing */ }
       audio = null;
     }
@@ -32,6 +45,7 @@ export function createModelAudioPlayer(win = window) {
       utterance.onstart = null;
       utterance.onend = null;
       utterance.onerror = null;
+      utterance.onboundary = null;
       utterance = null;
     }
     try { win.speechSynthesis?.cancel(); } catch (_) { /* unavailable */ }
@@ -41,15 +55,28 @@ export function createModelAudioPlayer(win = window) {
     if (audio && PLAYBACK_RATES.includes(rate)) audio.playbackRate = rate;
   };
 
-  const play = ({ unit, index, text, rate = 0.85, onSource, onEnd, onError }) => {
+  const play = ({ unit, index, text, rate = 0.85, onSource, onEnd, onError, onProgress }) => {
     stop();
     const id = playbackId;
     const current = () => id === playbackId;
+    const words = onProgress ? readingWords(text) : [];
+    let lastOffset = null;
+    const emit = (offset) => {
+      if (!current() || !onProgress || !Number.isInteger(offset) || offset === lastOffset) return;
+      lastOffset = offset;
+      onProgress(offset);
+    };
     const fail = () => {
-      if (current()) onError?.("音声を再生できません。もう一度「お手本を聞く」を押してください。");
+      if (current()) {
+        clearProgress();
+        onError?.("音声を再生できません。もう一度「お手本を聞く」を押してください。");
+      }
     };
     const finish = () => {
-      if (current()) onEnd?.();
+      if (current()) {
+        clearProgress();
+        onEnd?.();
+      }
     };
     const speak = () => {
       if (!current()) return;
@@ -68,7 +95,27 @@ export function createModelAudioPlayer(win = window) {
           voices.find((v) => v.lang === "en-US") ||
           voices.find((v) => v.lang?.startsWith("en")) ||
           null;
-        u.onstart = () => { if (current()) onSource?.("speech"); };
+        let boundarySeen = false;
+        u.onstart = () => {
+          if (!current()) return;
+          onSource?.("speech");
+          if (!words.length) return;
+          const startedAt = Date.now();
+          const seconds = estimatedReadingSeconds(words, rate);
+          emit(words[0].start);
+          watchProgress(() => {
+            if (current() && !boundarySeen)
+              emit(readingOffsetAt(words, (Date.now() - startedAt) / 1000 / seconds));
+          });
+        };
+        u.onboundary = (event) => {
+          if (!current() || !words.length || (event.name && event.name !== "word")) return;
+          if (!Number.isInteger(event.charIndex) || event.charIndex < 0) return;
+          boundarySeen = true;
+          const word = words.find(w => event.charIndex >= w.start && event.charIndex < w.end)
+            || words.find(w => w.start >= event.charIndex);
+          if (word) emit(word.start);
+        };
         u.onend = finish;
         u.onerror = (event) => {
           if (event?.error !== "canceled" && event?.error !== "interrupted") fail();
@@ -96,15 +143,31 @@ export function createModelAudioPlayer(win = window) {
       const fallback = () => {
         if (!current() || triedFallback || audio !== a) return;
         triedFallback = true;
+        clearProgress();
+        lastOffset = null;
         failedUrls.add(url);
         a.onplaying = null;
         a.onended = null;
         a.onerror = null;
+        a.ontimeupdate = null;
         try { a.pause(); } catch (_) { /* not playing */ }
         audio = null;
         speak();
       };
-      a.onplaying = () => { if (current()) onSource?.("model"); };
+      const updateProgress = () => {
+        if (current() && audio === a && words.length && a.duration > 0)
+          emit(readingOffsetAt(words, a.currentTime / a.duration));
+      };
+      a.onplaying = () => {
+        if (!current()) return;
+        onSource?.("model");
+        if (words.length) {
+          emit(words[0].start);
+          updateProgress();
+          watchProgress(updateProgress);
+        }
+      };
+      if (words.length) a.ontimeupdate = updateProgress;
       a.onended = finish;
       a.onerror = fallback;
       const result = a.play();

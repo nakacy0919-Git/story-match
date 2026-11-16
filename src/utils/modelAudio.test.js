@@ -115,3 +115,43 @@ test("speaking errors are visible and do not silently count as finished", () => 
   expect(onError).toHaveBeenCalledTimes(1);
   expect(onEnd).not.toHaveBeenCalled();
 });
+
+test("recorded audio word colors follow media time, including changed playback speed", () => {
+  const mock = fixture();
+  const onProgress = jest.fn();
+  const player = createModelAudioPlayer(mock.win);
+  player.play({ unit: 11, index: 0, text: "One two three", onProgress });
+  const a = mock.recordings[0];
+  a.duration = 3;
+  a.currentTime = 0;
+  a.onplaying();
+  expect(onProgress).toHaveBeenLastCalledWith(0);
+  player.setRate(1.25);
+  a.currentTime = 1.2;
+  a.ontimeupdate();
+  expect(onProgress).toHaveBeenLastCalledWith(4);
+  a.currentTime = 2.9;
+  a.ontimeupdate();
+  expect(onProgress).toHaveBeenLastCalledWith(8);
+  const stale = a.ontimeupdate;
+  player.stop();
+  a.currentTime = 0;
+  stale();
+  expect(onProgress).toHaveBeenLastCalledWith(8);
+});
+
+test("speech synthesis uses available word boundary offsets", () => {
+  const mock = fixture();
+  const onProgress = jest.fn();
+  const player = createModelAudioPlayer(mock.win);
+  player.play({ unit: 2, index: 0, text: "Hello world.", onProgress });
+  const u = mock.spoken[0];
+  u.onstart();
+  expect(onProgress).toHaveBeenLastCalledWith(0);
+  u.onboundary({name: "word", charIndex: 6});
+  expect(onProgress).toHaveBeenLastCalledWith(6);
+  u.onboundary({name: "sentence", charIndex: 0});
+  expect(onProgress).toHaveBeenLastCalledWith(6);
+  player.stop();
+  expect(u.onboundary).toBeNull();
+});
