@@ -71,6 +71,8 @@ export default function ReadingWordModal({entry,context,onClose}) {
   return createPortal(<div className="rw-shade" onPointerDown={e=>{if(e.target===e.currentTarget)close();}}>
     <section className="rw-dialog" role="dialog" aria-modal="true" aria-label="語句の意味と発音練習" tabIndex={-1} ref={dialog}>
       <header><span>WORD & PHRASE STUDIO</span><button type="button" className="rw-close" aria-label="閉じる" onClick={close}>×</button></header>
+      <div className="rw-columns">
+      <div className="rw-definition" aria-label="単語・熟語の意味">
       <strong className="rw-word">{entry.word}</strong>
       {entry.pronunciation&&<div className="rw-ipa">/{entry.pronunciation}/</div>}
       <p className="rw-meaning">{entry.meaning||"この単語の個別の意味は未登録です。"}</p>
@@ -81,7 +83,9 @@ export default function ReadingWordModal({entry,context,onClose}) {
         <button type="button" className="rw-listen" disabled={mic.phase!=="idle"} onClick={()=>speak(entry.phrase.word)}>🔊 語句の発音を聞く</button>
       </div>}
       {!entry.meaning&&<details><summary>文脈で意味を確認</summary><p>{context.en}</p><p>{context.ja}</p></details>}
-      <div className="rw-practice">
+      {error&&<p role="alert">{error}</p>}
+      </div>
+      <div className="rw-practice" aria-label="発音練習">
         <small>PRONUNCIATION CHECK</small>
         {entry.phrase&&<div className="rw-targets">
           <button type="button" aria-pressed={target===entry.word} disabled={mic.phase!=="idle"} onClick={()=>choose(entry.word)}>単語</button>
@@ -96,7 +100,7 @@ export default function ReadingWordModal({entry,context,onClose}) {
         {(mic.transcript||result?.spoken)&&<p className="rw-heard">認識：{mic.transcript||result.spoken}</p>}
         <small>音声認識による語句の一致判定です。音素単位の発音評価ではありません。</small>
       </div>
-      {error&&<p role="alert">{error}</p>}
+      </div>
     </section>
     {celebration>0&&<div className="rw-celebration" aria-hidden="true"><ReadingCelebration id={celebration}/><div className="rw-success"><span>✓</span><strong>CORRECT!</strong><small>Great pronunciation!</small></div></div>}
   </div>,document.body);
