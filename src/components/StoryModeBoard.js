@@ -3,6 +3,7 @@ import { score, createFeedback } from "../utils/readingScore";
 import ReadingCelebration from "./ReadingCelebration";
 import { useReadingSpeech } from "../utils/useReadingSpeech";
 import { createModelAudioPlayer, PLAYBACK_RATES } from "../utils/modelAudio";
+import { readingWords } from "../utils/readingKaraoke";
 import "./ReadingFocus.css";
 
 function Scene({
@@ -25,6 +26,9 @@ function Scene({
   const [showImage, setShowImage] = useState(true);
   const [showJapanese, setShowJapanese] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
+  const [karaokeEnabled, setKaraokeEnabled] = useState(true);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [activeOffset, setActiveOffset] = useState(null);
   useEffect(() => {
     if (!focusMode) return;
     const exit = (event) => { if (event.key === "Escape") setFocusMode(false); };
@@ -54,10 +58,14 @@ function Scene({
     `${unit}:${index}`,
     threshold,
   );
-  const stopAudio = () => playerRef.current.stop();
+  const stopAudio = () => {
+    playerRef.current.stop();
+    setAudioPlaying(false);
+    setActiveOffset(null);
+  };
   useEffect(
     () => () => {
-      stopAudio();
+      playerRef.current.stop();
       clearTimeout(celebrationTimer.current);
     },
     [],
@@ -71,13 +79,18 @@ function Scene({
     stopAudio();
   }, [unit, index]);
   const play = () => {
+    if (audioPlaying) { stopAudio(); return; }
     setAudioError("");
+    setActiveOffset(null);
+    setAudioPlaying(true);
     playerRef.current.play({
       unit,
       index,
       text: item.en,
       rate: playbackRate,
-      onError: setAudioError,
+      onProgress: setActiveOffset,
+      onEnd: () => { setAudioPlaying(false); setActiveOffset(item.en.length); },
+      onError: (message) => { setAudioError(message); setAudioPlaying(false); setActiveOffset(null); },
     });
   };
   const tapFeedback = () => {
@@ -85,6 +98,19 @@ function Scene({
     feedback.current.tone("tap");
   };
   const passed = best >= threshold || (result !== null && result >= threshold);
+  const isKaraoke = karaokeEnabled && activeOffset !== null;
+  const highlightedText = () => {
+    let previous = 0;
+    const parts = [];
+    for (const word of readingWords(item.en)) {
+      parts.push(item.en.slice(previous, word.start));
+      const style = word.start === activeOffset ? "karaoke-current" : word.start < activeOffset ? "karaoke-read" : "karaoke-unread";
+      parts.push(<span key={word.start} className={style}>{word.text}</span>);
+      previous = word.end;
+    }
+    parts.push(item.en.slice(previous));
+    return parts;
+  };
   return (
     <section className={"reading-studio" + (focusMode ? " is-reading-focus" : "")} aria-label="じっくり学習">
       {celebration > 0 && <ReadingCelebration id={celebration} />}
@@ -126,7 +152,10 @@ function Scene({
               disabled={mic.phase !== "idle"}
               onClick={play}
             >
-              🔊 お手本を聞く
+              {audioPlaying ? "■ お手本を停止" : "🔊 お手本を聞く"}
+            </button>
+            <button type="button" className="subtle reading-karaoke-toggle" aria-pressed={karaokeEnabled} onClick={() => setKaraokeEnabled(v => !v)}>
+              カラオケ {karaokeEnabled ? "ON" : "OFF"}
             </button>
             <label className="audio-speed-control">
               再生速度
@@ -145,7 +174,7 @@ function Scene({
               </select>
             </label>
           </div>
-          <p className="reading-english">{item.en}</p>
+          <p className="reading-english">{isKaraoke ? highlightedText() : item.en}</p>
           {showJapanese && <p className="reading-japanese">{item.ja}</p>}
         </div>
       </div>
@@ -188,6 +217,7 @@ function Scene({
           disabled={index === 0 || mic.phase !== "idle"}
           onClick={() => {
             mic.cancel();
+            stopAudio();
             onPrev();
           }}
         >
@@ -229,6 +259,7 @@ function Scene({
           disabled={!passed || mic.phase !== "idle"}
           onClick={() => {
             mic.cancel();
+            stopAudio();
             if (index === total - 1) onBack();
             else onNext();
           }}
