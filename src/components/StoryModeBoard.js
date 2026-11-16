@@ -3,6 +3,7 @@ import { score, createFeedback } from "../utils/readingScore";
 import ReadingCelebration from "./ReadingCelebration";
 import { useReadingSpeech } from "../utils/useReadingSpeech";
 import { createModelAudioPlayer, PLAYBACK_RATES } from "../utils/modelAudio";
+import "./ReadingFocus.css";
 
 function Scene({
   item,
@@ -21,6 +22,15 @@ function Scene({
     [spoken, setSpoken] = useState("");
   const [audioError, setAudioError] = useState("");
   const [playbackRate, setPlaybackRate] = useState(0.85);
+  const [showImage, setShowImage] = useState(true);
+  const [showJapanese, setShowJapanese] = useState(true);
+  const [focusMode, setFocusMode] = useState(false);
+  useEffect(() => {
+    if (!focusMode) return;
+    const exit = (event) => { if (event.key === "Escape") setFocusMode(false); };
+    window.addEventListener("keydown", exit);
+    return () => window.removeEventListener("keydown", exit);
+  }, [focusMode]);
   const playerRef = useRef(null);
   if (!playerRef.current) playerRef.current = createModelAudioPlayer();
   const [celebration, setCelebration] = useState(0);
@@ -76,7 +86,7 @@ function Scene({
   };
   const passed = best >= threshold || (result !== null && result >= threshold);
   return (
-    <section className="reading-studio">
+    <section className={"reading-studio" + (focusMode ? " is-reading-focus" : "")} aria-label="じっくり学習">
       {celebration > 0 && <ReadingCelebration id={celebration} />}
       <div className="reading-top">
         <span>
@@ -86,19 +96,30 @@ function Scene({
           {passed ? "✓ CLEAR" : `Accuracy ${threshold}%以上で合格`}
         </span>
       </div>
+      <div className="reading-view-tools" role="group" aria-label="音読の表示設定">
+        <button type="button" className="subtle" aria-pressed={showImage} onClick={() => setShowImage(v => !v)}>
+          🖼 画像 {showImage ? "ON" : "OFF"}
+        </button>
+        <button type="button" className="subtle" aria-pressed={showJapanese} onClick={() => setShowJapanese(v => !v)}>
+          和訳 {showJapanese ? "ON" : "OFF"}
+        </button>
+        <button type="button" className="subtle reading-focus-toggle" aria-pressed={focusMode} onClick={() => setFocusMode(v => !v)}>
+          {focusMode ? "⊡ 通常表示に戻る" : "⛶ 全画面音読"}
+        </button>
+      </div>
       <div
         className={
-          "reading-main " +
+          "reading-main " + (showImage ? "" : "reading-no-image ") +
           (item.en.length + item.ja.length * 0.5 > 130 ? "dense" : "")
         }
       >
-        <div className="reading-image">
+        <div className="reading-image" hidden={!showImage}>
           <img
             src={`${process.env.PUBLIC_URL}/images/unit${unit}/${index + 1}.webp`}
             alt={"Scene " + (index + 1)}
           />
         </div>
-        <div className="reading-text">
+        <div className="reading-text" role="region" aria-label="音読する英文" tabIndex={0}>
           <div className="reading-audio-toolbar">
             <button
               className="subtle"
@@ -125,7 +146,7 @@ function Scene({
             </label>
           </div>
           <p className="reading-english">{item.en}</p>
-          <p className="reading-japanese">{item.ja}</p>
+          {showJapanese && <p className="reading-japanese">{item.ja}</p>}
         </div>
       </div>
       <div className="reading-evaluation">
