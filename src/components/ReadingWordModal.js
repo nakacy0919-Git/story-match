@@ -12,6 +12,15 @@ export function wordPracticeScore(expected, spoken) {
   return {percent:a.length && a.length===b.length && a.every((v,i)=>v===b[i])?100:0};
 }
 
+function SpeakerButton({label,disabled,onClick}) {
+  return <button type="button" className="rw-speaker" aria-label={label} title={label} disabled={disabled} onClick={onClick}>
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M11 5 6 9H3v6h3l5 4V5Z" fill="currentColor" stroke="none"/>
+      <path d="M15 9a4 4 0 0 1 0 6m3-9a8 8 0 0 1 0 12"/>
+    </svg>
+  </button>;
+}
+
 export default function ReadingWordModal({entry,context,onClose}) {
   const [target,setTarget]=useState(entry.word);
   const [result,setResult]=useState(null);
@@ -73,14 +82,12 @@ export default function ReadingWordModal({entry,context,onClose}) {
       <header><span>WORD & PHRASE STUDIO</span><button type="button" className="rw-close" aria-label="閉じる" onClick={close}>×</button></header>
       <div className="rw-columns">
       <div className="rw-definition" aria-label="単語・熟語の意味">
-      <strong className="rw-word">{entry.word}</strong>
+      <div className="rw-word-line"><strong className="rw-word">{entry.word}</strong><SpeakerButton label="単語の発音を聞く" disabled={mic.phase!=="idle"} onClick={()=>speak(entry.word)}/></div>
       {entry.pronunciation&&<div className="rw-ipa">/{entry.pronunciation}/</div>}
       <p className="rw-meaning">{entry.meaning||"この単語の個別の意味は未登録です。"}</p>
       {entry.base&&entry.base.toLowerCase()!==entry.word.toLowerCase()&&<small>見出し語：{entry.base}</small>}
-      <button type="button" className="rw-listen" disabled={mic.phase!=="idle"} onClick={()=>speak(entry.word)}>🔊 単語の発音を聞く</button>
-      {entry.phrase&&<div className="rw-phrase"><small>本文中の語句・熟語</small><b>{entry.phrase.word}</b><p>{entry.phrase.meaning}</p>
+      {entry.phrase&&<div className="rw-phrase"><small>本文中の語句・熟語</small><div className="rw-word-line"><b>{entry.phrase.word}</b><SpeakerButton label="語句の発音を聞く" disabled={mic.phase!=="idle"} onClick={()=>speak(entry.phrase.word)}/></div><p>{entry.phrase.meaning}</p>
         {entry.phrase.pronunciation&&<small>/{entry.phrase.pronunciation}/</small>}
-        <button type="button" className="rw-listen" disabled={mic.phase!=="idle"} onClick={()=>speak(entry.phrase.word)}>🔊 語句の発音を聞く</button>
       </div>}
       {!entry.meaning&&<details><summary>文脈で意味を確認</summary><p>{context.en}</p><p>{context.ja}</p></details>}
       {error&&<p role="alert">{error}</p>}
