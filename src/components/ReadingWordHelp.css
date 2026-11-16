@@ -7,7 +7,6 @@
 .rw-word{font-size:clamp(32px,6vw,54px);line-height:1.1;overflow-wrap:anywhere}
 .rw-ipa{font-size:20px;color:#59738c}.rw-meaning{font-size:20px;font-weight:700;margin:2px 0 5px}
 .rw-dialog p{line-height:1.45;margin:4px 0}.rw-dialog small{font-size:12px;color:#506c86}
-.rw-dialog .rw-listen{align-self:flex-start}
 .rw-phrase,.rw-practice{border:1px solid #d8e4f0;border-radius:14px;background:#eef5fb;padding:12px;display:flex;flex-direction:column;align-items:flex-start;gap:7px}
 .rw-phrase b,.rw-practice b{font-size:24px;overflow-wrap:anywhere}
 .rw-targets{display:flex;gap:6px;flex-wrap:wrap}
@@ -31,7 +30,6 @@
 .rw-definition{min-width:0;display:flex;flex-direction:column;gap:7px}
 .rw-definition .rw-word{font-size:clamp(30px,4.3vw,49px);overflow-wrap:anywhere}
 .rw-definition .rw-meaning{font-size:clamp(17px,2vw,20px)}
-.rw-definition .rw-listen{align-self:stretch;min-height:40px;text-align:center}
 .rw-columns .rw-phrase,.rw-columns .rw-practice{min-width:0;align-items:stretch;padding:clamp(10px,1.5vw,16px)}
 .rw-columns .rw-phrase b,.rw-columns .rw-practice b{font-size:clamp(20px,2.4vw,28px);line-height:1.25}
 .rw-columns .rw-practice{background:#f2f7fc}
@@ -47,3 +45,12 @@
  .rw-columns{grid-template-columns:minmax(0,1fr);gap:10px}
  .rw-definition .rw-word{font-size:34px}
 }
+
+/* Compact, accessible speaker controls beside each pronunciation target. */
+.rw-word-line{display:flex;align-items:center;gap:10px;min-width:0}
+.rw-word-line>strong,.rw-word-line>b{min-width:0;overflow-wrap:anywhere}
+.rw-dialog .rw-speaker{display:inline-grid;place-items:center;flex:0 0 44px;width:44px;height:44px;min-height:44px;padding:0;border:1px solid #c9dfef;border-radius:50%;background:#eaf4ff;color:#2866a3;box-shadow:0 2px 7px #255a8c12;transition:background .15s,transform .15s,box-shadow .15s}
+.rw-dialog .rw-speaker:not(:disabled):hover{background:#d8eaff;color:#174f88;box-shadow:0 3px 10px #255a8c24}
+.rw-dialog .rw-speaker:not(:disabled):active{transform:scale(.94)}
+.rw-dialog .rw-speaker:focus-visible{outline:3px solid #1474ce;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.rw-dialog .rw-speaker{transition:none}}
