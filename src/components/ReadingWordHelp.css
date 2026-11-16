@@ -1,5 +1,5 @@
 .rw-shade{position:fixed;inset:0;z-index:30000;display:grid;place-items:center;padding:16px;background:#10243d83;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
-.rw-dialog{width:min(540px,100%);max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain;background:#fff;border:1px solid #d4e3ef;border-radius:24px;padding:22px;box-shadow:0 24px 80px #142c5266;color:#18334e;text-align:left;display:flex;flex-direction:column;gap:9px;outline:none}
+.rw-dialog{width:min(840px,100%);max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain;background:#fff;border:1px solid #d4e3ef;border-radius:20px;padding:clamp(12px,2vw,20px);box-shadow:0 24px 80px #142c5266;color:#18334e;text-align:left;display:flex;flex-direction:column;gap:12px;outline:none}
 .rw-dialog header{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#53759a;font-size:11px;letter-spacing:1.7px;font-weight:800}
 .rw-dialog button{cursor:pointer;min-height:42px;font:inherit;font-size:14px;font-weight:700;border:1px solid #c7d9e9;border-radius:10px;padding:8px 12px;background:white;color:#245382}
 .rw-dialog button:disabled{opacity:.5;cursor:default}
@@ -25,3 +25,25 @@
 .reading-studio .reading-english .rw-inline.karaoke-read{color:#16834e}
 .reading-studio .reading-english .rw-inline.karaoke-unread{color:#58677a}
 @media(prefers-reduced-motion:reduce){.rw-success{animation:none}.rw-celebration .reading-confetti{display:none}}
+
+/* Use the available width for definitions and practice, not empty card space. */
+.rw-columns{display:grid;grid-template-columns:minmax(0,1.04fr) minmax(0,1fr);align-items:start;gap:clamp(12px,1.8vw,20px);min-width:0}
+.rw-definition{min-width:0;display:flex;flex-direction:column;gap:7px}
+.rw-definition .rw-word{font-size:clamp(30px,4.3vw,49px);overflow-wrap:anywhere}
+.rw-definition .rw-meaning{font-size:clamp(17px,2vw,20px)}
+.rw-definition .rw-listen{align-self:stretch;min-height:40px;text-align:center}
+.rw-columns .rw-phrase,.rw-columns .rw-practice{min-width:0;align-items:stretch;padding:clamp(10px,1.5vw,16px)}
+.rw-columns .rw-phrase b,.rw-columns .rw-practice b{font-size:clamp(20px,2.4vw,28px);line-height:1.25}
+.rw-columns .rw-practice{background:#f2f7fc}
+.rw-columns .rw-practice .rw-targets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.rw-targets button{min-width:0;padding:7px 5px;overflow-wrap:anywhere}
+.rw-columns .rw-practice .rw-mic{width:100%;min-height:48px;margin-top:3px}
+.rw-columns .rw-practice p,.rw-columns .rw-practice small{overflow-wrap:anywhere}
+.rw-columns .rw-practice small:last-child{border-top:1px solid #d8e4f0;padding-top:8px;line-height:1.5}
+.rw-definition details{min-width:0;overflow-wrap:anywhere}
+@media(max-width:580px){
+ .rw-shade{padding:10px}
+ .rw-dialog{max-height:calc(100dvh - 20px);padding:12px;gap:9px}
+ .rw-columns{grid-template-columns:minmax(0,1fr);gap:10px}
+ .rw-definition .rw-word{font-size:34px}
+}
