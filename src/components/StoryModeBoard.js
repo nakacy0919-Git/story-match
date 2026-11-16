@@ -5,6 +5,8 @@ import { useReadingSpeech } from "../utils/useReadingSpeech";
 import { createModelAudioPlayer, PLAYBACK_RATES } from "../utils/modelAudio";
 import { readingWords } from "../utils/readingKaraoke";
 import "./ReadingFocus.css";
+import ReadingWordModal from "./ReadingWordModal";
+import { lookupReadingWord } from "../utils/readingWordHelp";
 
 function Scene({
   item,
@@ -29,6 +31,7 @@ function Scene({
   const [karaokeEnabled, setKaraokeEnabled] = useState(true);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [activeOffset, setActiveOffset] = useState(null);
+  const [wordEntry, setWordEntry] = useState(null);
   useEffect(() => {
     if (!focusMode) return;
     const exit = (event) => { if (event.key === "Escape") setFocusMode(false); };
@@ -76,6 +79,7 @@ function Scene({
     clearTimeout(celebrationTimer.current);
     setSpoken("");
     setAudioError("");
+    setWordEntry(null);
     stopAudio();
   }, [unit, index]);
   const play = () => {
@@ -99,13 +103,21 @@ function Scene({
   };
   const passed = best >= threshold || (result !== null && result >= threshold);
   const isKaraoke = karaokeEnabled && activeOffset !== null;
+  const openWord = (word) => {
+    if (mic.phase !== "idle") return;
+    const entry = lookupReadingWord(unit, item.en, word.start, word.text);
+    if (!entry) return;
+    stopAudio();
+    mic.cancel();
+    setWordEntry(entry);
+  };
   const highlightedText = () => {
     let previous = 0;
     const parts = [];
     for (const word of readingWords(item.en)) {
       parts.push(item.en.slice(previous, word.start));
-      const style = word.start === activeOffset ? "karaoke-current" : word.start < activeOffset ? "karaoke-read" : "karaoke-unread";
-      parts.push(<span key={word.start} className={style}>{word.text}</span>);
+      const style = !isKaraoke ? "" : word.start === activeOffset ? "karaoke-current" : word.start < activeOffset ? "karaoke-read" : "karaoke-unread";
+      parts.push(<button type="button" key={word.start} className={"rw-inline "+style} disabled={mic.phase !== "idle"} title="タップして意味・発音を確認" onClick={()=>openWord(word)}>{word.text}</button>);
       previous = word.end;
     }
     parts.push(item.en.slice(previous));
@@ -114,6 +126,7 @@ function Scene({
   return (
     <section className={"reading-studio" + (focusMode ? " is-reading-focus" : "")} aria-label="じっくり学習">
       {celebration > 0 && <ReadingCelebration id={celebration} />}
+      {wordEntry && <ReadingWordModal entry={wordEntry} context={item} onClose={()=>setWordEntry(null)}/>}
       <div className="reading-top">
         <span>
           Scene {index + 1} / {total}
@@ -174,7 +187,7 @@ function Scene({
               </select>
             </label>
           </div>
-          <p className="reading-english">{isKaraoke ? highlightedText() : item.en}</p>
+          <p className="reading-english">{highlightedText()}</p>
           {showJapanese && <p className="reading-japanese">{item.ja}</p>}
         </div>
       </div>
