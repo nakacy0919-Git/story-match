@@ -1,0 +1,113 @@
+/* Display-only controls for the Story Match reading mission. */
+.reading-view-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.reading-view-tools .subtle {
+  min-height: 36px;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+.reading-view-tools .subtle[aria-pressed="true"] {
+  background: #e2efff;
+  border-color: #719bd2;
+  color: #183f70;
+}
+.reading-view-tools .reading-focus-toggle {
+  margin-left: auto;
+  background: #275b93;
+  color: #fff;
+  border-color: #275b93;
+}
+.reading-studio .reading-main .reading-image[hidden] { display: none; }
+.reading-studio .reading-main .reading-text {
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+}
+.reading-studio .reading-main .reading-text > * { flex-shrink: 0; }
+.reading-studio .reading-main .reading-english {
+  font-size: clamp(20px, 2.7vw, 40px);
+  line-height: 1.45;
+  margin-block: auto;
+  padding-block: 12px;
+}
+.reading-studio .reading-main.reading-no-image .reading-text {
+  width: 100%;
+  padding-inline: clamp(14px, 4vw, 64px);
+}
+.reading-studio .reading-main.reading-no-image .reading-english {
+  font-size: clamp(25px, 4vw, 64px);
+}
+.reading-studio.is-reading-focus {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  box-sizing: border-box;
+  padding: max(8px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  background: #f1f5fb;
+  overflow-y: auto;
+  gap: 8px;
+}
+/* Hide background controls from keyboard navigation while focused. */
+.th-shell:has(.is-reading-focus) .th-unit-strip,
+.th-shell:has(.is-reading-focus) .th-sidebar,
+.app-shell:has(.is-reading-focus) > .app-header,
+.app-shell:has(.is-reading-focus) .game-toolbar {
+  visibility: hidden;
+}
+.reading-studio.is-reading-focus .reading-main {
+  flex: 1 0 160px;
+  min-height: 160px;
+}
+.reading-studio.is-reading-focus .reading-main .reading-image {
+  width: 43%;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(8px, 1.5vw, 22px);
+}
+.reading-studio.is-reading-focus .reading-main .reading-text {
+  padding: clamp(12px, 2vw, 32px);
+}
+.reading-studio.is-reading-focus .reading-main .reading-english {
+  font-size: clamp(24px, 3.7vw, 60px);
+  line-height: 1.4;
+}
+.reading-studio.is-reading-focus .reading-main.reading-no-image .reading-english {
+  font-size: clamp(30px, 5.6vw, 88px);
+}
+.reading-studio.is-reading-focus .reading-evaluation {
+  flex: 0 0 auto;
+  min-height: 80px;
+  max-height: 115px;
+}
+.reading-studio.is-reading-focus .reading-controls {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+@media (orientation: portrait) {
+  .reading-studio.is-reading-focus .reading-main { flex-direction: column; }
+  .reading-studio.is-reading-focus .reading-main:not(.reading-no-image) .reading-image {
+    width: 100%; height: 42%; flex: 0 0 42%;
+  }
+  .reading-studio.is-reading-focus .reading-main .reading-text { flex: 1 1 0; }
+  .reading-studio.is-reading-focus .reading-main .reading-english {
+    font-size: clamp(23px, 5vw, 46px);
+  }
+  .reading-studio.is-reading-focus .reading-main.reading-no-image .reading-english {
+    font-size: clamp(28px, 7vw, 64px);
+  }
+}
+@media (max-width: 700px) {
+  .reading-studio .reading-view-tools .subtle { min-height: 34px; padding: 6px 8px; font-size: 12px; }
+  .reading-studio.is-reading-focus .reading-evaluation { min-height: 96px; }
+  .reading-studio.is-reading-focus .reading-controls .primary { padding: 9px 12px; }
+}
