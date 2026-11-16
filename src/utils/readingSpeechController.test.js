@@ -1,5 +1,6 @@
 import { createReadingSpeechController } from "./readingSpeechController";
 import { score } from "./readingScore";
+import { wordPracticeScore } from "../components/ReadingWordModal";
 let engine, latest, instances, changes, scores;
 class Recognizer {
   constructor() {
@@ -119,8 +120,8 @@ test("empty recognition does not overwrite a score, and missing end uses the 160
 test("word auto-check judges final speech immediately and retries without a stop tap", () => {
   engine.setItem({id:"word:world",sentence:"world",autoJudge:true});
   engine.begin();
-  latest.result([["world",false]]);
-  expect(scores).toHaveLength(0); // interim text may still be revised
+  latest.result([["word",false]]);
+  expect(scores).toHaveLength(0); // nonmatching interim text may still be revised
   latest.result([["word",true]]);
   expect(scores).toEqual([[0,"word","word:world"]]);
   expect(changes.at(-1).phase).toBe("listening");
@@ -149,4 +150,54 @@ test("manual reading is not automatically finalized",()=>{
   expect(changes.at(-1).phase).toBe("listening");
   engine.stop();
   expect(scores[0][0]).toBe(100);
+});
+
+test.each([
+  ["very","very",100],
+  ["very","very sad",100],
+  ["very","very very",100],
+  ["very","Very, sad!",100],
+  ["very","berry",0],
+  ["very","every",0],
+  ["world","word",0],
+  ["look at","please look at the picture",100],
+  ["look at","look right at",0],
+  ["look at","at look",0],
+  ["look at","look",0],
+  ["","very",0]
+])("word practice target %s against %s", (target,spoken,expected)=>{
+  expect(wordPracticeScore(target,spoken).percent).toBe(expected);
+});
+test("word practice accepts a matching interim transcript immediately, then ignores late events",()=>{
+  engine.cancel();
+  engine=createReadingSpeechController({
+    host:{SpeechRecognition:Recognizer,setTimeout,clearTimeout,speechSynthesis:{cancel(){}}},
+    calculate:wordPracticeScore,getThreshold:()=>100,
+    onChange:x=>changes.push(x),onScore:(...x)=>scores.push(x)
+  });
+  engine.setItem({id:"word:very",sentence:"very",autoJudge:true});
+  engine.begin();
+  latest.result([["every",false]]);
+  expect(scores).toHaveLength(0);
+  const late=latest.onresult;
+  latest.result([["very sad",false]]);
+  expect(scores).toEqual([[100,"very sad","word:very"]]);
+  expect(changes.at(-1).phase).toBe("idle");
+  late({results:[Object.assign([{transcript:"very sad"}],{isFinal:true})]});
+  expect(scores).toHaveLength(1);
+});
+test("word practice waits for a complete phrase and permits extra words",()=>{
+  engine.cancel();
+  engine=createReadingSpeechController({
+    host:{SpeechRecognition:Recognizer,setTimeout,clearTimeout,speechSynthesis:{cancel(){}}},
+    calculate:wordPracticeScore,getThreshold:()=>100,
+    onChange:x=>changes.push(x),onScore:(...x)=>scores.push(x)
+  });
+  engine.setItem({id:"word:look at",sentence:"look at",autoJudge:true});
+  engine.begin();
+  latest.result([["look",false]]);
+  expect(scores).toHaveLength(0);
+  latest.result([["please look",true],["at the picture",false]]);
+  expect(scores).toEqual([[100,"please look at the picture","word:look at"]]);
+  expect(changes.at(-1).phase).toBe("idle");
 });
