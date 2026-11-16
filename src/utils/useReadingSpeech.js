@@ -9,6 +9,7 @@ export function useReadingSpeech(
   calculate,
   sceneId,
   threshold = 80,
+  autoJudge = false,
 ) {
   const [view, setView] = useState({
     phase: "idle",
@@ -34,8 +35,8 @@ export function useReadingSpeech(
     });
   useLayoutEffect(() => {
     const controller = engine.current;
-    controller.setItem({ id: sceneId, sentence });
+    controller.setItem({ id: sceneId, sentence, autoJudge });
     return () => controller.cancel();
-  }, [sceneId, sentence]);
+  }, [sceneId, sentence, autoJudge]);
   return { ...view, ...engine.current };
 }

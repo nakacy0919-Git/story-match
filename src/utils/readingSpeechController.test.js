@@ -115,3 +115,38 @@ test("empty recognition does not overwrite a score, and missing end uses the 160
   jest.advanceTimersByTime(2000);
   expect(scores).toHaveLength(1);
 });
+
+test("word auto-check judges final speech immediately and retries without a stop tap", () => {
+  engine.setItem({id:"word:world",sentence:"world",autoJudge:true});
+  engine.begin();
+  latest.result([["world",false]]);
+  expect(scores).toHaveLength(0); // interim text may still be revised
+  latest.result([["word",true]]);
+  expect(scores).toEqual([[0,"word","word:world"]]);
+  expect(changes.at(-1).phase).toBe("listening");
+  const late=latest.onresult;
+  latest.result([["word",true],["world",true]]);
+  expect(scores).toEqual([[0,"word","word:world"],[100,"world","word:world"]]);
+  expect(changes.at(-1).phase).toBe("idle");
+  late({results:[Object.assign([{transcript:"world"}],{isFinal:true})]});
+  jest.advanceTimersByTime(12000);
+  expect(scores).toHaveLength(2);
+});
+
+test("word auto-check times out after inactivity and does not award a score",()=>{
+  engine.setItem({id:"word:world",sentence:"world",autoJudge:true});
+  engine.begin();
+  jest.advanceTimersByTime(10000);
+  expect(changes.at(-1).phase).toBe("idle");
+  expect(changes.at(-1).status).toContain("時間切れ");
+  expect(scores).toHaveLength(0);
+});
+
+test("manual reading is not automatically finalized",()=>{
+  engine.begin();
+  latest.result([["I like reading English books",true]]);
+  expect(scores).toHaveLength(0);
+  expect(changes.at(-1).phase).toBe("listening");
+  engine.stop();
+  expect(scores[0][0]).toBe(100);
+});

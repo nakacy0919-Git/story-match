@@ -22,6 +22,7 @@ export function createReadingSpeechController({
     healthTimer: null,
     stopTimer: null,
     restartTimer: null,
+    autoTimer: null,
   };
   let view = {
     phase: "idle",
@@ -34,7 +35,7 @@ export function createReadingSpeechController({
     onChange(view);
   };
   const clearTimers = () => {
-    for (const key of ["healthTimer", "stopTimer", "restartTimer"]) {
+    for (const key of ["healthTimer", "stopTimer", "restartTimer", "autoTimer"]) {
       host.clearTimeout(state[key]);
       state[key] = null;
     }
@@ -62,7 +63,7 @@ export function createReadingSpeechController({
       try {
         r.abort();
       } catch (_) {}
-    paint({ phase: "idle" });
+    paint(state.item?.autoJudge ? { phase: "idle", status: "マイクを押して発音してください。" } : { phase: "idle" });
   }
   function setItem(item) {
     cancel();
@@ -73,7 +74,7 @@ export function createReadingSpeechController({
     paint({
       phase: "idle",
       transcript: "",
-      status: "音読スタートを押して、英文を最後まで読みましょう。",
+      status: item.autoJudge ? "マイクを押して発音してください。" : "音読スタートを押して、英文を最後まで読みましょう。",
     });
   }
   function finalize(token, item, timeout = false) {
@@ -141,8 +142,17 @@ export function createReadingSpeechController({
     paint({
       phase: "listening",
       transcript: "",
-      status: "🔴 音読中です。読み終えたら「終了・判定」を押してください。",
+      status: item.autoJudge ? "発音してください…" : "🔴 音読中です。読み終えたら「終了・判定」を押してください。",
     });
+    const autoTimeout = () => {
+      host.clearTimeout(state.autoTimer);
+      state.autoTimer = host.setTimeout(() => {
+        if (token !== state.token || !state.recording || state.stopRequested) return;
+        cancel();
+        paint({status:"時間切れです。マイクを押して再挑戦してください。"});
+      }, 10000);
+    };
+    if (item.autoJudge) autoTimeout();
     const listen = () => {
       if (
         !state.recording ||
@@ -170,6 +180,7 @@ export function createReadingSpeechController({
         state.recognition === r &&
         state.item?.id === item.id;
       const previousTranscript = state.transcript;
+      let autoFinalCount = 0;
       state.healthTimer = host.setTimeout(() => {
         state.healthTimer = null;
         if (!current() || state.stopRequested || state.signals.text) return;
@@ -197,7 +208,7 @@ export function createReadingSpeechController({
         if (current() && state.recording)
           paint({
             status:
-              "音声認識サービスが開始しました。マイク入力・文字起こしを確認中です。",
+              item.autoJudge ? "発音してください…" : "音声認識サービスが開始しました。マイク入力・文字起こしを確認中です。",
           });
       };
       r.onaudiostart = () => {
@@ -222,6 +233,32 @@ export function createReadingSpeechController({
           if (text) (result.isFinal ? finals : interims).push(text);
         }
         if (!finals.length && !interims.length) return;
+        if (item.autoJudge) {
+          // A final browser result, not a speculative interim hypothesis, is judged.
+          // Never accumulate a previous incorrect attempt into the next attempt.
+          const newlyFinal = finals.slice(autoFinalCount);
+          autoFinalCount = finals.length;
+          const heard = newlyFinal.join(" ").trim();
+          const interim = interims.join(" ").trim();
+          state.signals = { audio: true, voice: true, text: true };
+          host.clearTimeout(state.healthTimer);
+          state.healthTimer = null;
+          autoTimeout();
+          if (!heard) {
+            if (interim) paint({transcript:interim,status:"発音を認識中…"});
+            return;
+          }
+          const percent = calculate(item.sentence, heard).percent;
+          if (percent >= getThreshold()) {
+            cancel(); // invalidates even queued events before reporting success
+            paint({transcript:heard,status:"✓ CORRECT!"});
+            onScore(percent,heard,item.id);
+          } else {
+            paint({transcript:heard,status:"もう一度発音してください。"});
+            onScore(percent,heard,item.id);
+          }
+          return;
+        }
         host.clearTimeout(state.healthTimer);
         state.healthTimer = null;
         state.transcript = [previousTranscript, ...finals]

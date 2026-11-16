@@ -35,7 +35,7 @@ export default function ReadingWordModal({entry,context,onClose}) {
       clearTimeout(timer.current);
       timer.current=setTimeout(()=>setCelebration(0),2200);
     }
-  },wordPracticeScore,"word:"+target,100);
+  },wordPracticeScore,"word:"+target,100,true);
   const micRef=useRef(mic);
   micRef.current=mic;
   const closeRef=useRef(onClose);
@@ -99,13 +99,19 @@ export default function ReadingWordModal({entry,context,onClose}) {
           <button type="button" aria-pressed={target===entry.phrase.word} disabled={mic.phase!=="idle"} onClick={()=>choose(entry.phrase.word)}>熟語・語句</button>
         </div>}
         <b>{target}</b>
-        <button type="button" className="rw-mic" disabled={mic.phase==="scoring"} onClick={()=>{
-          if(mic.phase==="listening"){mic.stop();return;}
-          window.speechSynthesis?.cancel();clearTimeout(timer.current);setResult(null);setCelebration(0);mic.begin();
-        }}>{mic.phase==="listening"?"■ 終了・判定":mic.phase==="scoring"?"判定中…":"🎙 発音チェック"}</button>
-        <p role="status">{result?(result.percent===100?"✓ CORRECT! 正しく認識されました。":"もう一度発音してみましょう。"):mic.status}</p>
+        <div className="rw-mic-area">
+          <button type="button" className={"rw-mic"+(mic.phase==="listening"?" is-listening":"")+(result?.percent===100?" is-correct":"")} disabled={mic.phase==="scoring"} aria-label={mic.phase==="listening"?"発音チェックを停止":"発音チェック"} aria-pressed={mic.phase==="listening"} title={mic.phase==="listening"?"停止":"発音チェック"} onClick={()=>{
+            if(mic.phase==="listening"){mic.cancel();setResult(null);return;}
+            window.speechSynthesis?.cancel();clearTimeout(timer.current);setResult(null);setCelebration(0);mic.begin();
+          }}>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {mic.phase==="listening"?<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>:result?.percent===100?<path d="m5 12 4 4L19 6"/>:<><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></>}
+            </svg>
+          </button>
+          <span className="rw-mic-caption">{mic.phase==="listening"?"認識中・タップで停止":result?.percent===100?"もう一度練習":"発音チェック"}</span>
+        </div>
+        <p role="status">{result?.percent===100?"✓ CORRECT!":mic.status}</p>
         {(mic.transcript||result?.spoken)&&<p className="rw-heard">認識：{mic.transcript||result.spoken}</p>}
-        <small>音声認識による語句の一致判定です。音素単位の発音評価ではありません。</small>
       </div>
       </div>
     </section>
