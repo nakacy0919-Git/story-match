@@ -1,4 +1,7 @@
 {
   "buildCommand": "PUBLIC_URL=/ npm run build",
-  "outputDirectory": "build"
+  "outputDirectory": "build",
+  "git": {
+    "deploymentEnabled": false
+  }
 }
