@@ -15,7 +15,7 @@ test("continuous playback changes images and captions in order and offers readin
  const onFinish=jest.fn();
  render(<StoryTheater unit={12} storyData={data} onFinish={onFinish} onBack={jest.fn()}/>);
  expect(screen.getByText("First scene.")).toBeInTheDocument();
- expect(screen.queryByRole("button",{name:/音読へ進む/})).not.toBeInTheDocument();
+ expect(screen.getByRole("button",{name:/スキップして音読へ進む/})).toBeEnabled();
  fireEvent.click(screen.getByRole("button",{name:/自動再生/}));
  expect(mockPlay.mock.calls[0][0]).toMatchObject({index:0,text:"First scene."});
  act(()=>{mockPlay.mock.calls[0][0].onEnd();jest.advanceTimersByTime(650);});
@@ -46,4 +46,17 @@ test("audio errors stop playback rather than silently skipping a scene",()=>{
  expect(screen.getByRole("alert")).toHaveTextContent("再生できません");
  expect(screen.getByText("First scene.")).toBeInTheDocument();
  expect(mockPlay).toHaveBeenCalledTimes(1);
+});
+
+test("skip is available immediately and cancels active narration without completing a scene",()=>{
+ const onFinish=jest.fn();
+ render(<StoryTheater unit={12} storyData={data} onFinish={onFinish} onBack={jest.fn()}/>);
+ fireEvent.click(screen.getByRole("button",{name:/自動再生/}));
+ const playback=mockPlay.mock.calls[0][0];
+ fireEvent.click(screen.getByRole("button",{name:/スキップして音読へ進む/}));
+ expect(onFinish).toHaveBeenCalledTimes(1);
+ expect(mockStop).toHaveBeenCalled();
+ act(()=>{playback.onEnd();jest.advanceTimersByTime(1000);});
+ expect(mockPlay).toHaveBeenCalledTimes(1);
+ expect(screen.getByText("First scene.")).toBeInTheDocument();
 });

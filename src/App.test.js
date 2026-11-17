@@ -373,3 +373,12 @@ test("script size changes and translation remains accessible while recording",()
   fireEvent.click(screen.getByRole("button",{name:/終了・判定/}));
   expect(document.querySelector(".reading-english button")).toBeInTheDocument();
 });
+
+test("theater can skip straight to the first unfinished reading scene without marking progress",()=>{
+  render(<App/>);
+  fireEvent.click(screen.getByRole("button",{name:/📖.*じっくり学習/}));
+  fireEvent.click(screen.getByRole("button",{name:/スキップして音読へ進む/}));
+  expect(screen.getByText("Scene 1 / 12")).toBeInTheDocument();
+  expect(screen.getByRole("button",{name:/音読スタート/})).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem(progressKey(student)))?.[2]?.reading).toBeUndefined();
+});
