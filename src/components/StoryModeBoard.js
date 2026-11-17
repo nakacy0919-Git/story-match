@@ -5,6 +5,7 @@ import { useReadingSpeech } from "../utils/useReadingSpeech";
 import { createModelAudioPlayer, PLAYBACK_RATES } from "../utils/modelAudio";
 import { readingWords } from "../utils/readingKaraoke";
 import "./ReadingFocus.css";
+import {readStoredJSON, writeStoredJSON} from "../utils/storage";
 import ReadingWordModal from "./ReadingWordModal";
 import { lookupReadingWord } from "../utils/readingWordHelp";
 
@@ -27,6 +28,12 @@ function Scene({
   const [playbackRate, setPlaybackRate] = useState(0.85);
   const [showImage, setShowImage] = useState(true);
   const [showJapanese, setShowJapanese] = useState(true);
+  const [fontScale, setFontScale] = useState(()=>{
+    const saved=Number(readStoredJSON("treasureReadingScale",100));
+    return Number.isFinite(saved)?Math.max(70,Math.min(160,saved)):100;
+  });
+  const resizeText=delta=>setFontScale(value=>Math.max(70,Math.min(160,value+delta)));
+  useEffect(()=>{writeStoredJSON("treasureReadingScale",fontScale);},[fontScale]);
   const [focusMode, setFocusMode] = useState(false);
   const [karaokeEnabled, setKaraokeEnabled] = useState(true);
   const [audioPlaying, setAudioPlaying] = useState(false);
@@ -102,7 +109,7 @@ function Scene({
     feedback.current.tone("tap");
   };
   const passed = best >= threshold || (result !== null && result >= threshold);
-  const isKaraoke = karaokeEnabled && activeOffset !== null;
+  const isKaraoke = karaokeEnabled && audioPlaying && mic.phase === "idle" && activeOffset !== null;
   const openWord = (word) => {
     if (mic.phase !== "idle") return;
     const entry = lookupReadingWord(unit, item.en, word.start, word.text);
@@ -117,14 +124,14 @@ function Scene({
     for (const word of readingWords(item.en)) {
       parts.push(item.en.slice(previous, word.start));
       const style = !isKaraoke ? "" : word.start === activeOffset ? "karaoke-current" : word.start < activeOffset ? "karaoke-read" : "karaoke-unread";
-      parts.push(<button type="button" key={word.start} className={"rw-inline "+style} disabled={mic.phase !== "idle"} title="タップして意味・発音を確認" onClick={()=>openWord(word)}>{word.text}</button>);
+      parts.push(mic.phase!=="idle" ? <span key={word.start} className="rw-reading-word">{word.text}</span> : <button type="button" key={word.start} className={"rw-inline "+style} title="タップして意味・発音を確認" onClick={()=>openWord(word)}>{word.text}</button>);
       previous = word.end;
     }
     parts.push(item.en.slice(previous));
     return parts;
   };
   return (
-    <section className={"reading-studio" + (focusMode ? " is-reading-focus" : "")} aria-label="じっくり学習">
+    <section className={"reading-studio" + (focusMode ? " is-reading-focus" : "")} style={{"--reading-font-scale":fontScale/100}} aria-label="じっくり学習">
       {celebration > 0 && <ReadingCelebration id={celebration} />}
       {wordEntry && <ReadingWordModal entry={wordEntry} context={item} onClose={()=>setWordEntry(null)}/>}
       <div className="reading-top">
@@ -142,6 +149,11 @@ function Scene({
         <button type="button" className="subtle" aria-pressed={showJapanese} onClick={() => setShowJapanese(v => !v)}>
           和訳 {showJapanese ? "ON" : "OFF"}
         </button>
+        <div className="reading-size-tools" role="group" aria-label="文字サイズ">
+          <button type="button" className="subtle" aria-label="文字を小さく" disabled={fontScale<=70} onClick={()=>resizeText(-10)}>A−</button>
+          <output aria-label="文字サイズの倍率">{fontScale}%</output>
+          <button type="button" className="subtle" aria-label="文字を大きく" disabled={fontScale>=160} onClick={()=>resizeText(10)}>A＋</button>
+        </div>
         <button type="button" className="subtle reading-focus-toggle" aria-pressed={focusMode} onClick={() => setFocusMode(v => !v)}>
           {focusMode ? "⊡ 通常表示に戻る" : "⛶ 全画面音読"}
         </button>
@@ -187,8 +199,10 @@ function Scene({
               </select>
             </label>
           </div>
+          <div className="reading-script-scroll" tabIndex={0} aria-label="英文と日本語訳">
           <p className="reading-english">{highlightedText()}</p>
           {showJapanese && <p className="reading-japanese">{item.ja}</p>}
+          </div>
         </div>
       </div>
       <div className="reading-evaluation">
