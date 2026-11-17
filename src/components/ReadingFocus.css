@@ -27,7 +27,7 @@
   align-self: stretch;
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   overflow-wrap: anywhere;
   text-align: left;
   display: flex;
@@ -35,18 +35,19 @@
 }
 .reading-studio .reading-main .reading-text > * { flex-shrink: 0; }
 .reading-studio .reading-main .reading-english {
-  font-size: clamp(20px, 2.7vw, 40px);
+  font-size: calc(clamp(20px, 2.7vw, 40px) * var(--reading-font-scale, 1));
   line-height: 1.45;
   text-align: left;
-  margin-block: auto;
-  padding-block: 12px;
+  margin-block: 0;
+  padding-block: 4px;
+  color: #111827;
 }
 .reading-studio .reading-main.reading-no-image .reading-text {
   width: 100%;
   padding-inline: clamp(14px, 4vw, 64px);
 }
 .reading-studio .reading-main.reading-no-image .reading-english {
-  font-size: clamp(25px, 4vw, 64px);
+  font-size: calc(clamp(25px, 4vw, 64px) * var(--reading-font-scale, 1));
 }
 .reading-studio.is-reading-focus {
   position: fixed;
@@ -80,11 +81,11 @@
   padding: clamp(12px, 2vw, 32px);
 }
 .reading-studio.is-reading-focus .reading-main .reading-english {
-  font-size: clamp(24px, 3.7vw, 60px);
+  font-size: calc(clamp(24px, 3.7vw, 60px) * var(--reading-font-scale, 1));
   line-height: 1.4;
 }
 .reading-studio.is-reading-focus .reading-main.reading-no-image .reading-english {
-  font-size: clamp(30px, 5.6vw, 88px);
+  font-size: calc(clamp(30px, 5.6vw, 88px) * var(--reading-font-scale, 1));
 }
 .reading-studio.is-reading-focus .reading-evaluation {
   flex: 0 0 auto;
@@ -148,10 +149,10 @@
   }
   .reading-studio.is-reading-focus .reading-main .reading-text { flex: 1 1 0; }
   .reading-studio.is-reading-focus .reading-main .reading-english {
-    font-size: clamp(23px, 5vw, 46px);
+    font-size: calc(clamp(23px, 5vw, 46px) * var(--reading-font-scale, 1));
   }
   .reading-studio.is-reading-focus .reading-main.reading-no-image .reading-english {
-    font-size: clamp(28px, 7vw, 64px);
+    font-size: calc(clamp(28px, 7vw, 64px) * var(--reading-font-scale, 1));
   }
 }
 @media (max-width: 700px) {
@@ -177,3 +178,16 @@
   color: #183f70;
 }
 .reading-studio .reading-audio-toolbar { flex-wrap: wrap; }
+
+/* Keep Japanese visible in a dedicated area even at large English font sizes. */
+.reading-studio .reading-main .reading-script-scroll{display:flex;flex:1 1 0;min-height:0;min-width:0;flex-direction:column;overflow:hidden;gap:8px;padding:6px 3px 8px}
+.reading-studio .reading-main .reading-en-scroll{display:flex;flex:1 1 0;min-height:0;min-width:0;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.reading-studio .reading-en-scroll>.reading-english{flex-shrink:0;margin-block:auto}
+.reading-studio .reading-main .reading-script-scroll>.reading-japanese{flex:0 1 auto;min-height:2.2em;max-height:40%;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;font-size:calc(clamp(14px,1.65vw,22px)*var(--reading-font-scale,1));line-height:1.55;color:#34465a;margin:0;padding-top:8px;border-top:1px solid #d6e1eb;white-space:normal}
+.reading-studio .reading-english .rw-reading-word{color:#111827;opacity:1}
+.reading-studio .reading-english .rw-inline:not(.karaoke-current):not(.karaoke-read):not(.karaoke-unread){color:#111827;opacity:1}
+.reading-size-tools{display:flex;align-items:center;gap:4px}
+.reading-size-tools output{font-size:12px;min-width:42px;text-align:center;font-variant-numeric:tabular-nums;color:#334155}
+.reading-view-tools .reading-size-tools .subtle{min-width:36px;padding-inline:8px}
+.reading-studio .reading-audio-toolbar{flex:0 0 auto}
+@media(max-height:520px){.reading-studio .reading-main .reading-text{padding-block:6px}.reading-studio .reading-script-scroll{padding-top:3px}}

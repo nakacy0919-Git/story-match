@@ -155,3 +155,21 @@ test("speech synthesis uses available word boundary offsets", () => {
   player.stop();
   expect(u.onboundary).toBeNull();
 });
+
+test("story playback reuses the activated media element while invalidating earlier callbacks",()=>{
+  const mock=fixture();
+  const player=createModelAudioPlayer(mock.win,{reuseAudio:true});
+  const first=jest.fn(),second=jest.fn();
+  player.play({unit:12,index:0,text:"First",onEnd:first});
+  const stale=mock.recordings[0].onended;
+  mock.recordings[0].onended();
+  expect(first).toHaveBeenCalledTimes(1);
+  player.play({unit:12,index:1,text:"Second",onEnd:second});
+  expect(mock.AudioMock).toHaveBeenCalledTimes(1);
+  expect(mock.recordings[0].src).toContain("/audio/unit12/2.wav");
+  stale();
+  expect(first).toHaveBeenCalledTimes(1);
+  expect(second).not.toHaveBeenCalled();
+  mock.recordings[0].onended();
+  expect(second).toHaveBeenCalledTimes(1);
+});

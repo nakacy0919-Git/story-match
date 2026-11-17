@@ -16,9 +16,10 @@ export function modelAudioUrl(unit, index) {
   return `${process.env.PUBLIC_URL || ""}/audio/unit${unit}/${index + 1}.wav`;
 }
 
-export function createModelAudioPlayer(win = window) {
+export function createModelAudioPlayer(win = window, {reuseAudio = false} = {}) {
   let playbackId = 0;
   let audio = null;
+  let sharedAudio = null;
   let utterance = null;
   let progressTimer = null;
   const clearProgress = () => {
@@ -135,7 +136,12 @@ export function createModelAudioPlayer(win = window) {
       return;
     }
     try {
-      const a = new win.Audio(url);
+      // Reuse the user-activated media element for sequential story playback.
+      const a = reuseAudio && sharedAudio ? sharedAudio : new win.Audio(url);
+      if (reuseAudio) {
+        if (sharedAudio) a.src = url;
+        sharedAudio = a;
+      }
       audio = a;
       a.preload = "auto";
       a.playbackRate = rate;
