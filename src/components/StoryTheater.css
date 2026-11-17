@@ -29,3 +29,6 @@ body:has(.story-theater)>#root{visibility:hidden}
 @media(max-width:600px){.story-theater{gap:6px}.theater-controls{gap:5px}.story-theater button,.story-theater select{font-size:12px;padding:7px 9px}.theater-caption{max-height:75%}.theater-caption p{font-size:clamp(17px,4.3vw,28px)}}
 @media(max-height:520px){.theater-header>div>span{display:none}.theater-caption p{font-size:clamp(16px,2.4vw,28px)}.theater-caption.is-long p{font-size:clamp(15px,2vw,24px)}}
 @media(prefers-reduced-motion:reduce){.theater-picture{animation:none}.theater-progress i{transition:none}}
+
+/* Fit the subtitle frame to the illustration rather than its letterbox. */
+@supports (width: 1cqw){.theater-stage{container-type:size}.theater-picture{width:min(100cqw,calc(100cqh * var(--picture-ratio,1.7778)));height:min(100cqh,calc(100cqw / var(--picture-ratio,1.7778)))}}
