@@ -49,8 +49,13 @@ afterEach(() => {
   cleanup();
   jest.useRealTimers();
 });
-const reading = () =>
-  fireEvent.click(screen.getByRole("button", { name: /📖.*じっくり学習/ }));
+const reading = () => {
+  fireEvent.click(screen.getByRole("button", {name:/📖.*じっくり学習/}));
+  expect(screen.getByRole("region",{name:"紙芝居モード"})).toBeInTheDocument();
+  const next=screen.getByRole("button",{name:"次のシーン"});
+  while(!next.disabled)fireEvent.click(next);
+  fireEvent.click(screen.getByRole("button",{name:/音読へ進む/}));
+};
 const say = (text) => {
   fireEvent.click(screen.getByRole("button", { name: "🎙 音読スタート" }));
   act(() => SpeechMock.latest.say(text));
@@ -337,4 +342,34 @@ test("listening waits until the model audio finishes before enabling answers", (
   } finally {
     window.Audio = OriginalAudio;
   }
+});
+
+test("theater opens first, starts at scene one, and does not record reading progress",()=>{
+  render(<App/>);
+  fireEvent.click(screen.getByRole("button",{name:/📖.*じっくり学習/}));
+  expect(screen.getByText("Scene 1 / 12")).toBeInTheDocument();
+  expect(screen.queryByRole("button",{name:/音読スタート/})).not.toBeInTheDocument();
+  expect(screen.getByText("Colin wanted to get easy money from the hospital.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button",{name:"和訳 OFF"}));
+  expect(document.querySelector(".theater-ja")).toBeInTheDocument();
+  const next=screen.getByRole("button",{name:"次のシーン"});
+  while(!next.disabled)fireEvent.click(next);
+  expect(screen.getByText("Scene 12 / 12")).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem(progressKey(student)))?.[2]?.reading).toBeUndefined();
+  fireEvent.click(screen.getByRole("button",{name:/音読へ進む/}));
+  expect(screen.getByText("Scene 1 / 12")).toBeInTheDocument();
+  expect(screen.getByRole("button",{name:/音読スタート/})).toBeInTheDocument();
+});
+test("script size changes and translation remains accessible while recording",()=>{
+  render(<App/>);reading();
+  const studio=screen.getByRole("region",{name:"じっくり学習"});
+  fireEvent.click(screen.getByRole("button",{name:"文字を大きく"}));
+  expect(studio.style.getPropertyValue("--reading-font-scale")).toBe("1.1");
+  expect(document.querySelector(".reading-japanese")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button",{name:/音読スタート/}));
+  expect(document.querySelector(".reading-english button")).toBeNull();
+  expect(document.querySelector(".rw-reading-word")).toBeInTheDocument();
+  expect(document.querySelector(".reading-japanese")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button",{name:/終了・判定/}));
+  expect(document.querySelector(".reading-english button")).toBeInTheDocument();
 });
