@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import MatchBoard from "./components/MatchBoard";
 import RandomModeBoard from "./components/RandomModeBoard";
 import StoryModeBoard from "./components/StoryModeBoard";
+import StoryTheater from "./components/StoryTheater";
 import ListeningModeBoard from "./components/ListeningModeBoard";
 import HistoryBoard from "./components/HistoryBoard";
 import { allUnitsData } from "./unitsData";
@@ -20,7 +21,7 @@ import AdminSettings from "./components/AdminSettings";
 import { useMissionRules } from "./utils/useMissionRules";
 
 const modes = [
-  ["reading", "📖", "じっくり学習", "絵本のように", "ストーリーを読む"],
+  ["reading", "📖", "じっくり学習", "紙芝居で本文を読む・聞く", "そのあと音読に挑戦"],
   ["puzzle", "🧩", "パズルモード", "空欄に画像を当てはめ", "物語を完成させる"],
   ["random", "⚡", "ランダムモード", "英文からイラストを", "素早く見極める"],
   ["listening", "🎧", "リスニング", "流れる音声を聞いて", "正しい画像を選ぶ"],
@@ -259,10 +260,10 @@ function App({ embedded = false, selectedUnit = null }) {
     <main
       className={
         "app-shell " +
-        (view === "game" || view === "settings" ? "mission-active" : "")
+        (view === "game" || view === "settings" || view === "theater" ? "mission-active" : "")
       }
     >
-      {!embedded && view !== "game" && view !== "settings" && (
+      {!embedded && view !== "game" && view !== "settings" && view !== "theater" && (
         <header className="app-header">
           <div>
             <span className="eyebrow">TREASURE HUNT</span>
@@ -308,7 +309,9 @@ function App({ embedded = false, selectedUnit = null }) {
           端末に保存できません。画面を閉じる前にスクリーンショットを保存してください。
         </div>
       )}
-      {view === "dashboard" ? (
+      {view === "theater" ? (
+        <StoryTheater key={unit+"-"+attempt} unit={unit} storyData={data} onBack={back} onFinish={()=>setView("game")}/>
+      ) : view === "dashboard" ? (
         <section className="dashboard">
           {!embedded && <nav className="unit-grid" aria-label="ユニットごとの学習進捗">
             {units.map((n) => {
@@ -365,7 +368,7 @@ function App({ embedded = false, selectedUnit = null }) {
                 className={"mission-card " + id}
                 onClick={() => {
                   setMode(id);
-                  if (id === "reading") start();
+                  if (id === "reading") { reset(); setView("theater"); }
                   else setView("settings");
                 }}
               >
