@@ -24,7 +24,7 @@ export default function StoryTheater({storyData,unit,onFinish,onBack}) {
     const old=document.activeElement;
     dialog.current?.focus();
     return ()=>{
-      generation.current++;
+      generation.current = generation.current + 1;
       clearTimeout(timer.current);clearTimeout(watchdog.current);
       player.current.stop();
       if(old?.isConnected)old.focus();
