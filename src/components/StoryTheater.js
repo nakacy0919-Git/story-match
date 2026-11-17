@@ -84,7 +84,7 @@ export default function StoryTheater({storyData,unit,onFinish,onBack}) {
       <div className="theater-progress" aria-hidden="true"><i style={{width:((index+1)/total*100)+"%"}}/></div>
       <div className="theater-stage">
         <div key={index} className="theater-picture">
-          <img src={sceneImage(unit,index)} alt={"Scene "+(index+1)}/>
+          <img src={sceneImage(unit,index)} alt={"Scene "+(index+1)} onLoad={e=>{const img=e.currentTarget;if(img.naturalWidth&&img.naturalHeight)img.parentElement.style.setProperty("--picture-ratio",String(img.naturalWidth/img.naturalHeight));}}/>
           <div className={"theater-caption"+(item.en.length>190?" is-long":"")} tabIndex={0}>
             <p>{item.en}</p>
             {japanese&&<p className="theater-ja">{item.ja}</p>}
