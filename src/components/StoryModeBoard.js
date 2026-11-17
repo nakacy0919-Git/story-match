@@ -199,9 +199,9 @@ function Scene({
               </select>
             </label>
           </div>
-          <div className="reading-script-scroll" tabIndex={0} aria-label="英文と日本語訳">
-          <p className="reading-english">{highlightedText()}</p>
-          {showJapanese && <p className="reading-japanese">{item.ja}</p>}
+          <div className="reading-script-scroll" aria-label="英文と日本語訳">
+          <div className="reading-en-scroll" tabIndex={0} aria-label="英文"><p className="reading-english">{highlightedText()}</p></div>
+          {showJapanese && <p className="reading-japanese" tabIndex={0} aria-label="日本語訳">{item.ja}</p>}
           </div>
         </div>
       </div>
