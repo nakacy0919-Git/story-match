@@ -179,12 +179,11 @@
 }
 .reading-studio .reading-audio-toolbar { flex-wrap: wrap; }
 
-/* Scroll the full bilingual script independently of the toolbar. */
-.reading-studio .reading-main .reading-script-scroll{display:flex;flex:1 1 0;min-height:0;min-width:0;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;gap:10px;padding:8px 3px 14px;scrollbar-gutter:stable}
-.reading-studio .reading-script-scroll>*{flex-shrink:0}
-.reading-studio .reading-script-scroll>.reading-english{margin-top:auto}
-.reading-studio .reading-script-scroll>.reading-japanese{font-size:calc(clamp(14px,1.65vw,22px)*var(--reading-font-scale,1));line-height:1.6;color:#34465a;margin:0 0 auto;padding-top:9px;border-top:1px solid #d6e1eb;white-space:normal}
-.reading-studio .reading-script-scroll>.reading-english:last-child{margin-bottom:auto}
+/* Keep Japanese visible in a dedicated area even at large English font sizes. */
+.reading-studio .reading-main .reading-script-scroll{display:flex;flex:1 1 0;min-height:0;min-width:0;flex-direction:column;overflow:hidden;gap:8px;padding:6px 3px 8px}
+.reading-studio .reading-main .reading-en-scroll{display:flex;flex:1 1 0;min-height:0;min-width:0;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.reading-studio .reading-en-scroll>.reading-english{flex-shrink:0;margin-block:auto}
+.reading-studio .reading-main .reading-script-scroll>.reading-japanese{flex:0 1 auto;min-height:2.2em;max-height:40%;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;font-size:calc(clamp(14px,1.65vw,22px)*var(--reading-font-scale,1));line-height:1.55;color:#34465a;margin:0;padding-top:8px;border-top:1px solid #d6e1eb;white-space:normal}
 .reading-studio .reading-english .rw-reading-word{color:#111827;opacity:1}
 .reading-studio .reading-english .rw-inline:not(.karaoke-current):not(.karaoke-read):not(.karaoke-unread){color:#111827;opacity:1}
 .reading-size-tools{display:flex;align-items:center;gap:4px}
